@@ -2,9 +2,10 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { leadActivities, leadSourceEnum, leadStageEnum, leads } from "@/db/schema";
+import { customers, leadActivities, leadSourceEnum, leadStageEnum, leads, profiles } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 
 const createLeadSchema = z.object({
@@ -60,4 +61,139 @@ export async function updateLeadStage(
   });
 
   revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+}
+
+const updateLeadSchema = z.object({
+  contactName: z.string().trim().min(1, "Name is required"),
+  contactPhone: z.string().trim().min(1, "Phone is required"),
+  interest: z.string().trim().min(1, "Say what they're enquiring about"),
+  source: z.enum(leadSourceEnum.enumValues),
+  followUpAt: z
+    .string()
+    .optional()
+    .transform((value) => (value ? new Date(value) : null)),
+});
+
+export async function updateLead(leadId: string, _prevState: { error: string | null }, formData: FormData) {
+  const user = await requireUser();
+
+  const parsed = updateLeadSchema.safeParse({
+    contactName: formData.get("contactName"),
+    contactPhone: formData.get("contactPhone"),
+    interest: formData.get("interest"),
+    source: formData.get("source"),
+    followUpAt: formData.get("followUpAt") || undefined,
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the form and try again." };
+  }
+
+  await db
+    .update(leads)
+    .set({ ...parsed.data, updatedAt: new Date() })
+    .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)));
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/leads");
+  return { error: null };
+}
+
+export async function assignLead(leadId: string, assigneeId: string) {
+  const user = await requireUser();
+
+  let nextAssignee: string | null = null;
+  if (assigneeId !== "unassigned") {
+    const [assignee] = await db
+      .select({ id: profiles.id })
+      .from(profiles)
+      .where(and(eq(profiles.id, assigneeId), eq(profiles.orgId, user.orgId)))
+      .limit(1);
+    if (!assignee) return;
+    nextAssignee = assignee.id;
+  }
+
+  await db
+    .update(leads)
+    .set({ assignedTo: nextAssignee, updatedAt: new Date() })
+    .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)));
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/leads");
+}
+
+const addNoteSchema = z.object({
+  body: z.string().trim().min(1, "Write something first"),
+});
+
+export async function addLeadNote(leadId: string, _prevState: { error: string | null }, formData: FormData) {
+  const user = await requireUser();
+
+  const parsed = addNoteSchema.safeParse({ body: formData.get("body") });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the note and try again." };
+  }
+
+  const [lead] = await db
+    .select({ id: leads.id })
+    .from(leads)
+    .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)))
+    .limit(1);
+
+  if (!lead) {
+    return { error: "Lead not found." };
+  }
+
+  await db.insert(leadActivities).values({
+    leadId,
+    authorId: user.id,
+    kind: "note",
+    body: parsed.data.body,
+  });
+
+  revalidatePath(`/leads/${leadId}`);
+  return { error: null };
+}
+
+export async function convertLeadToCustomer(leadId: string, formData: FormData) {
+  const user = await requireUser();
+
+  const [lead] = await db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)))
+    .limit(1);
+
+  if (!lead) return;
+
+  const vehicleNumber = String(formData.get("vehicleNumber") ?? "").trim() || null;
+  const email = String(formData.get("email") ?? "").trim() || null;
+
+  const [customer] = await db
+    .insert(customers)
+    .values({
+      orgId: user.orgId,
+      fullName: lead.contactName,
+      phone: lead.contactPhone,
+      email,
+      vehicleNumber,
+    })
+    .returning({ id: customers.id });
+
+  await db
+    .update(leads)
+    .set({ customerId: customer.id, stage: "booked", updatedAt: new Date() })
+    .where(eq(leads.id, leadId));
+
+  await db.insert(leadActivities).values({
+    leadId,
+    authorId: user.id,
+    kind: "stage_change",
+    body: "Converted to customer and marked booked",
+  });
+
+  revalidatePath("/leads");
+  revalidatePath("/customers");
+  redirect(`/customers/${customer.id}`);
 }

@@ -1,4 +1,4 @@
-import { and, count, eq, gte } from "drizzle-orm";
+import { and, count, eq, isNotNull, lte, notInArray } from "drizzle-orm";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
@@ -8,8 +8,8 @@ import { Card } from "@/components/ui/card";
 export default async function DashboardPage() {
   const user = await requireUser();
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
 
   const [[openLeads], [dueToday], [bookedLeads]] = await Promise.all([
     db
@@ -19,7 +19,14 @@ export default async function DashboardPage() {
     db
       .select({ value: count() })
       .from(leads)
-      .where(and(eq(leads.orgId, user.orgId), gte(leads.followUpAt, startOfToday))),
+      .where(
+        and(
+          eq(leads.orgId, user.orgId),
+          isNotNull(leads.followUpAt),
+          lte(leads.followUpAt, endOfToday),
+          notInArray(leads.stage, ["booked", "lost"]),
+        ),
+      ),
     db
       .select({ value: count() })
       .from(leads)
@@ -28,7 +35,7 @@ export default async function DashboardPage() {
 
   const stats = [
     { label: "New leads", value: openLeads?.value ?? 0 },
-    { label: "Follow-ups due today", value: dueToday?.value ?? 0 },
+    { label: "Follow-ups due or overdue", value: dueToday?.value ?? 0 },
     { label: "Booked", value: bookedLeads?.value ?? 0 },
   ];
 

@@ -1,9 +1,11 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import type { InferSelectModel } from "drizzle-orm";
 import type { leads } from "@/db/schema";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/input";
 import { updateLeadStage } from "./actions";
 
@@ -54,17 +56,37 @@ export function PipelineBoard({ leads }: { leads: Lead[] }) {
   );
 }
 
+function followUpTone(followUpAt: Date | null): { label: string; tone: "danger" | "accent" } | null {
+  if (!followUpAt) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(followUpAt);
+  due.setHours(0, 0, 0, 0);
+
+  if (due < today) return { label: "Overdue", tone: "danger" };
+  if (due.getTime() === today.getTime()) return { label: "Due today", tone: "accent" };
+  return null;
+}
+
 function LeadCard({ lead }: { lead: Lead }) {
   const [isPending, startTransition] = useTransition();
+  const followUp = followUpTone(lead.followUpAt);
 
   return (
     <Card className="p-3.5">
-      <p className="text-sm font-semibold">{lead.contactName}</p>
+      <Link href={`/leads/${lead.id}`} className="text-sm font-semibold hover:text-accent-deep">
+        {lead.contactName}
+      </Link>
       <p className="mt-0.5 text-xs text-muted">{lead.interest}</p>
       <div className="mt-2.5 flex items-center justify-between gap-2">
         <span className="font-mono text-[0.68rem] text-faint">{SOURCE_LABELS[lead.source]}</span>
         <span className="font-mono text-[0.68rem] text-faint">{lead.contactPhone}</span>
       </div>
+      {followUp ? (
+        <Badge tone={followUp.tone} className="mt-2.5">
+          {followUp.label}
+        </Badge>
+      ) : null}
       <Select
         className="mt-3 h-8 text-xs"
         value={lead.stage}

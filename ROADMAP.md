@@ -30,14 +30,14 @@ Phases build on each other; within a phase, items are roughly in build order but
 - [x] Stage changes logged to activity history
 - [x] Dashboard with live counts (new leads, follow-ups due, booked)
 - [x] Customers list (read-only)
-- [ ] Lead detail page (full activity timeline, notes, edit fields)
-- [ ] Assign leads to staff (picker, not just "assigned to me")
-- [ ] Follow-up reminders — set a `followUpAt` date on a lead, surface "due today/overdue" on dashboard and in the board
-- [ ] Manual "convert to customer" action (lead → `customers` row, keeps history linked)
-- [ ] Lead search / filter (by stage, source, assignee, date range)
-- [ ] Customer detail page (profile, vehicle info, full booking/service history, linked leads)
-- [ ] Edit/delete customer records
-- [ ] Staff management (invite teammates, assign role: owner/staff)
+- [x] Lead detail page (full activity timeline, notes, edit fields)
+- [x] Assign leads to staff (picker, not just "assigned to me")
+- [x] Follow-up reminders — set a `followUpAt` date on a lead, surface "due today/overdue" on dashboard and in the board
+- [x] Manual "convert to customer" action (lead → `customers` row, keeps history linked)
+- [x] Lead search / filter (by stage, source, assignee, date range)
+- [x] Customer detail page (profile, vehicle info, full booking/service history, linked leads)
+- [x] Edit/delete customer records
+- [x] Staff management (invite teammates, assign role: owner/staff)
 
 ---
 
