@@ -43,14 +43,17 @@ Phases build on each other; within a phase, items are roughly in build order but
 
 ## Phase 2 — Customer Retention
 
-- [ ] WhatsApp integration (choose provider: WhatsApp Cloud API vs. a BSP like Gupshup/Interakt)
-- [ ] Automated "vehicle received" message on booking
-- [ ] Automated "ready for pickup" message + bill link on completion
-- [ ] Service/rental due-date tracking per customer (interval configurable per business)
-- [ ] Automated 30-day-after reminder with optional offer text
-- [ ] Repeat-customer campaign tool (manual send to a filtered customer segment)
-- [ ] Slot booking link (public page, no login) — customer picks an open time
-- [ ] Customer-facing status page (view booking/service stage via link, no account needed)
+- [x] WhatsApp integration — WhatsApp Cloud API, behind a provider interface (`lib/whatsapp/`) with a console-log fallback so the app works without live credentials; every send audited in `whatsapp_messages`
+- [x] Automated "vehicle received" message — fires on lead → customer conversion
+- [x] "Ready for pickup" message + status link — one-click staff action on the lead detail page (not state-machine-automatic yet; there's no distinct "job complete" stage until Phase 4 billing exists)
+- [x] Service/rental due-date tracking per customer (`nextServiceDueAt`, org-configurable `serviceIntervalDays`)
+- [x] Automated reminder — daily Vercel Cron (`/api/cron/service-reminders`), org-configurable message text with `{{name}}` personalization
+- [x] Repeat-customer campaign tool (`/campaigns` — audience = all or due-for-service, logged to `campaigns`)
+- [x] Slot booking link — public page at `/book/[org-slug]`, no login
+- [x] Customer-facing status page — public page at `/status/[token]`, no login
+
+**Needs real credentials to actually send WhatsApp messages:** set `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_ACCESS_TOKEN` (see `.env.example`). Until then everything runs end-to-end with messages logged instead of sent — safe to demo, not yet live.
+**Also needs, to run in production:** `CRON_SECRET` set in both `.env`/Vercel and the reminder cron will 401 without it matching; `NEXT_PUBLIC_APP_URL` so booking/status links in messages point at the real domain instead of `localhost`.
 
 ---
 

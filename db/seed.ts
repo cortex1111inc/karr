@@ -2,6 +2,7 @@ import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 import { db } from "./index";
 import { organizations, profiles } from "./schema";
+import { uniqueSlug } from "../lib/slug";
 
 // One-time dev setup: links an existing Supabase auth user (create one via
 // the Supabase dashboard → Authentication → Users first) to a fresh
@@ -38,7 +39,10 @@ async function main() {
     process.exit(1);
   }
 
-  const [org] = await db.insert(organizations).values({ name: orgName }).returning();
+  const [org] = await db
+    .insert(organizations)
+    .values({ name: orgName, slug: uniqueSlug(orgName) })
+    .returning();
 
   await db.insert(profiles).values({
     id: authUser.id,

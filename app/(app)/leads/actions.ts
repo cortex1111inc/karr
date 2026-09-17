@@ -5,8 +5,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { customers, leadActivities, leadSourceEnum, leadStageEnum, leads, profiles } from "@/db/schema";
+import { customers, leadActivities, leadSourceEnum, leadStageEnum, leads, organizations, profiles } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { generatePublicToken } from "@/lib/tokens";
+import { getSiteUrl } from "@/lib/site";
+import { sendWhatsApp } from "@/lib/whatsapp";
 
 const createLeadSchema = z.object({
   contactName: z.string().trim().min(1, "Name is required"),
@@ -32,6 +35,7 @@ export async function createLead(_prevState: { error: string | null }, formData:
   await db.insert(leads).values({
     orgId: user.orgId,
     assignedTo: user.id,
+    publicToken: generatePublicToken(),
     ...parsed.data,
   });
 
@@ -167,8 +171,18 @@ export async function convertLeadToCustomer(leadId: string, formData: FormData) 
 
   if (!lead) return;
 
+  const [org] = await db
+    .select({ serviceIntervalDays: organizations.serviceIntervalDays })
+    .from(organizations)
+    .where(eq(organizations.id, user.orgId))
+    .limit(1);
+
   const vehicleNumber = String(formData.get("vehicleNumber") ?? "").trim() || null;
   const email = String(formData.get("email") ?? "").trim() || null;
+
+  const now = new Date();
+  const nextServiceDueAt = new Date(now);
+  nextServiceDueAt.setDate(nextServiceDueAt.getDate() + (org?.serviceIntervalDays ?? 30));
 
   const [customer] = await db
     .insert(customers)
@@ -178,6 +192,8 @@ export async function convertLeadToCustomer(leadId: string, formData: FormData) 
       phone: lead.contactPhone,
       email,
       vehicleNumber,
+      lastServiceAt: now,
+      nextServiceDueAt,
     })
     .returning({ id: customers.id });
 
@@ -193,7 +209,54 @@ export async function convertLeadToCustomer(leadId: string, formData: FormData) 
     body: "Converted to customer and marked booked",
   });
 
+  const statusUrl = `${getSiteUrl()}/status/${lead.publicToken}`;
+  await sendWhatsApp({
+    orgId: user.orgId,
+    to: lead.contactPhone,
+    kind: "vehicle_received",
+    customerId: customer.id,
+    leadId,
+    body: `Hi ${lead.contactName}, we've got your booking for "${lead.interest}". Track it here: ${statusUrl}`,
+  });
+  await db.insert(leadActivities).values({
+    leadId,
+    authorId: user.id,
+    kind: "whatsapp",
+    body: "Sent vehicle-received WhatsApp message",
+  });
+
   revalidatePath("/leads");
   revalidatePath("/customers");
   redirect(`/customers/${customer.id}`);
+}
+
+export async function notifyReadyForPickup(leadId: string) {
+  const user = await requireUser();
+
+  const [lead] = await db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)))
+    .limit(1);
+
+  if (!lead) return;
+
+  const statusUrl = `${getSiteUrl()}/status/${lead.publicToken}`;
+  await sendWhatsApp({
+    orgId: user.orgId,
+    to: lead.contactPhone,
+    kind: "ready_for_pickup",
+    customerId: lead.customerId ?? undefined,
+    leadId,
+    body: `Hi ${lead.contactName}, your vehicle is ready for pickup! View your booking and bill: ${statusUrl}`,
+  });
+
+  await db.insert(leadActivities).values({
+    leadId,
+    authorId: user.id,
+    kind: "whatsapp",
+    body: "Sent ready-for-pickup WhatsApp message",
+  });
+
+  revalidatePath(`/leads/${leadId}`);
 }

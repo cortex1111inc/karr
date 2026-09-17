@@ -8,7 +8,8 @@ const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/leads", label: "Leads" },
   { href: "/customers", label: "Customers" },
-  { href: "/settings/team", label: "Team" },
+  { href: "/campaigns", label: "Campaigns" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function NavLinks() {

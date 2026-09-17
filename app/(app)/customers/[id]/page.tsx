@@ -2,13 +2,21 @@ import { and, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { customers, leads } from "@/db/schema";
+import { customers, leads, whatsappMessages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EditCustomerForm } from "./edit-customer-form";
 import { DeleteCustomerButton } from "./delete-customer-button";
+
+const MESSAGE_KIND_LABEL: Record<string, string> = {
+  vehicle_received: "Vehicle received",
+  ready_for_pickup: "Ready for pickup",
+  service_reminder: "Service reminder",
+  campaign: "Campaign",
+  manual: "Manual",
+};
 
 const STAGE_LABEL: Record<string, string> = {
   new: "New",
@@ -30,11 +38,19 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   if (!customer) notFound();
 
-  const history = await db
-    .select()
-    .from(leads)
-    .where(and(eq(leads.customerId, id), eq(leads.orgId, user.orgId)))
-    .orderBy(desc(leads.createdAt));
+  const [history, messages] = await Promise.all([
+    db
+      .select()
+      .from(leads)
+      .where(and(eq(leads.customerId, id), eq(leads.orgId, user.orgId)))
+      .orderBy(desc(leads.createdAt)),
+    db
+      .select()
+      .from(whatsappMessages)
+      .where(and(eq(whatsappMessages.customerId, id), eq(whatsappMessages.orgId, user.orgId)))
+      .orderBy(desc(whatsappMessages.createdAt))
+      .limit(10),
+  ]);
 
   return (
     <>
@@ -54,30 +70,78 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <EditCustomerForm customer={customer} />
           </Card>
 
-          <Card className="p-5">
-            <h2 className="font-display text-sm font-bold">Booking / service history</h2>
-            <div className="mt-4 flex flex-col gap-3">
-              {history.length === 0 ? (
-                <p className="text-sm text-faint">No linked bookings yet.</p>
-              ) : (
-                history.map((lead) => (
-                  <Link
-                    key={lead.id}
-                    href={`/leads/${lead.id}`}
-                    className="block rounded-lg border border-border p-3 text-sm transition-colors hover:border-border-strong"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{lead.interest}</span>
-                      <Badge tone="neutral">{STAGE_LABEL[lead.stage]}</Badge>
+          <div className="flex flex-col gap-6">
+            <Card className="p-5">
+              <h2 className="font-display text-sm font-bold">Retention</h2>
+              <dl className="mt-3 flex flex-col gap-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-muted">Last service</dt>
+                  <dd className="font-mono text-xs tabular-nums">
+                    {customer.lastServiceAt ? customer.lastServiceAt.toLocaleDateString() : "—"}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted">Next due</dt>
+                  <dd className="font-mono text-xs tabular-nums">
+                    {customer.nextServiceDueAt ? customer.nextServiceDueAt.toLocaleDateString() : "—"}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted">Last reminder sent</dt>
+                  <dd className="font-mono text-xs tabular-nums">
+                    {customer.lastReminderSentAt ? customer.lastReminderSentAt.toLocaleDateString() : "—"}
+                  </dd>
+                </div>
+              </dl>
+            </Card>
+
+            <Card className="p-5">
+              <h2 className="font-display text-sm font-bold">Booking / service history</h2>
+              <div className="mt-4 flex flex-col gap-3">
+                {history.length === 0 ? (
+                  <p className="text-sm text-faint">No linked bookings yet.</p>
+                ) : (
+                  history.map((lead) => (
+                    <Link
+                      key={lead.id}
+                      href={`/leads/${lead.id}`}
+                      className="block rounded-lg border border-border p-3 text-sm transition-colors hover:border-border-strong"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{lead.interest}</span>
+                        <Badge tone="neutral">{STAGE_LABEL[lead.stage]}</Badge>
+                      </div>
+                      <span className="mt-1 block font-mono text-[0.68rem] text-faint">
+                        {lead.createdAt.toLocaleDateString()}
+                      </span>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            <Card className="p-5">
+              <h2 className="font-display text-sm font-bold">WhatsApp activity</h2>
+              <div className="mt-4 flex flex-col gap-3">
+                {messages.length === 0 ? (
+                  <p className="text-sm text-faint">No messages sent yet.</p>
+                ) : (
+                  messages.map((message) => (
+                    <div key={message.id} className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[0.68rem] uppercase tracking-wide text-faint">
+                          {MESSAGE_KIND_LABEL[message.kind]}
+                        </span>
+                        <Badge tone={message.status === "sent" ? "accent" : "danger"}>{message.status}</Badge>
+                        <span className="text-xs text-faint">{message.createdAt.toLocaleString()}</span>
+                      </div>
+                      <p className="mt-1 text-muted">{message.body}</p>
                     </div>
-                    <span className="mt-1 block font-mono text-[0.68rem] text-faint">
-                      {lead.createdAt.toLocaleDateString()}
-                    </span>
-                  </Link>
-                ))
-              )}
-            </div>
-          </Card>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
     </>
