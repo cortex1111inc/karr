@@ -19,7 +19,9 @@ Phases build on each other; within a phase, items are roughly in build order but
 - [x] Dev seed script (`db:seed`) to link a Supabase auth user to an org
 - [x] Pushed to GitHub (`cortex1111inc/karr`)
 - [x] Deployed to Vercel and working end-to-end (env vars + pooled `DATABASE_URL` configured)
-- [ ] Production Supabase project separated from dev/local (or documented single-project flow)
+- [x] Production Supabase project separated from dev/local — **decision: staying on one shared project for now** (single-user testing phase); revisit before real customer data goes in
+- [x] `CRON_SECRET` generated and set (locally in `.env`; **still needs adding to Vercel** → Project Settings → Environment Variables)
+- [x] Git commit author fixed to use real email instead of machine hostname
 
 ---
 
@@ -52,8 +54,8 @@ Phases build on each other; within a phase, items are roughly in build order but
 - [x] Slot booking link — public page at `/book/[org-slug]`, no login
 - [x] Customer-facing status page — public page at `/status/[token]`, no login
 
-**Needs real credentials to actually send WhatsApp messages:** set `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_ACCESS_TOKEN` (see `.env.example`). Until then everything runs end-to-end with messages logged instead of sent — safe to demo, not yet live.
-**Also needs, to run in production:** `CRON_SECRET` set in both `.env`/Vercel and the reminder cron will 401 without it matching; `NEXT_PUBLIC_APP_URL` so booking/status links in messages point at the real domain instead of `localhost`.
+**WhatsApp is on the console-log fallback by design, for now** — decided to hold off wiring up real send until there's a Meta WhatsApp Business account to connect. Everything else runs end-to-end (messages logged, not sent). To go live: set `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_ACCESS_TOKEN` (see `.env.example`).
+`NEXT_PUBLIC_APP_URL` is unset but not blocking — `lib/site.ts` falls back to Vercel's `VERCEL_URL` automatically, so booking/status links in messages already resolve correctly in production. Only set it explicitly if a custom domain is added.
 
 ---
 
