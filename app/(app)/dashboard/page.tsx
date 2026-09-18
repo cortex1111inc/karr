@@ -1,7 +1,7 @@
-import { and, count, eq, isNotNull, lte, notInArray } from "drizzle-orm";
+import { and, count, eq, isNotNull, lte, notInArray, sql } from "drizzle-orm";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/db";
-import { customers, leads } from "@/db/schema";
+import { customers, leads, stockItems } from "@/db/schema";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 
@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   const endOfToday = new Date();
   endOfToday.setHours(23, 59, 59, 999);
 
-  const [[openLeads], [dueToday], [bookedLeads], [dueForService]] = await Promise.all([
+  const [[openLeads], [dueToday], [bookedLeads], [dueForService], [lowStock]] = await Promise.all([
     db
       .select({ value: count() })
       .from(leads)
@@ -35,6 +35,10 @@ export default async function DashboardPage() {
       .select({ value: count() })
       .from(customers)
       .where(and(eq(customers.orgId, user.orgId), isNotNull(customers.nextServiceDueAt), lte(customers.nextServiceDueAt, endOfToday))),
+    db
+      .select({ value: count() })
+      .from(stockItems)
+      .where(and(eq(stockItems.orgId, user.orgId), sql`${stockItems.quantityOnHand} <= ${stockItems.lowStockThreshold}`)),
   ]);
 
   const stats = [
@@ -42,13 +46,14 @@ export default async function DashboardPage() {
     { label: "Follow-ups due or overdue", value: dueToday?.value ?? 0 },
     { label: "Booked", value: bookedLeads?.value ?? 0 },
     { label: "Customers due for service", value: dueForService?.value ?? 0 },
+    { label: "Low stock items", value: lowStock?.value ?? 0 },
   ];
 
   return (
     <>
       <PageHeader title={`Welcome back, ${user.fullName.split(" ")[0]}`} description="Here's where things stand today." />
       <div className="flex-1 px-8 py-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {stats.map((stat) => (
             <Card key={stat.label} className="p-5">
               <p className="font-mono text-2xl font-medium tabular-nums">{stat.value}</p>

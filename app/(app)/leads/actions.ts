@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { customers, leadActivities, leadSourceEnum, leadStageEnum, leads, organizations, profiles } from "@/db/schema";
+import { customers, leadActivities, leadSourceEnum, leadStageEnum, leads, organizations, profiles, vehicles } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { generatePublicToken } from "@/lib/tokens";
 import { getSiteUrl } from "@/lib/site";
@@ -259,4 +259,27 @@ export async function notifyReadyForPickup(leadId: string) {
   });
 
   revalidatePath(`/leads/${leadId}`);
+}
+
+export async function assignVehicleToLead(leadId: string, vehicleId: string) {
+  const user = await requireUser();
+
+  let nextVehicleId: string | null = null;
+  if (vehicleId !== "none") {
+    const [vehicle] = await db
+      .select({ id: vehicles.id })
+      .from(vehicles)
+      .where(and(eq(vehicles.id, vehicleId), eq(vehicles.orgId, user.orgId)))
+      .limit(1);
+    if (!vehicle) return;
+    nextVehicleId = vehicle.id;
+  }
+
+  await db
+    .update(leads)
+    .set({ vehicleId: nextVehicleId, updatedAt: new Date() })
+    .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)));
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/leads");
 }

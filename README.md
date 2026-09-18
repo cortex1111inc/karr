@@ -67,7 +67,13 @@ Quotations (`/quotations`) and invoices (`/invoices`) are separate tables, not o
 - **Public share links** (`/quote/[token]`, `/invoice/[token]`) follow the same unlisted-token pattern as the booking status page — no login, not indexed, just unguessable enough that only someone with the link (the customer it was sent to) can view it.
 - The line-item editor (`components/billing/line-items-editor.tsx`) is shared between quotations and invoices: add/remove rows, live subtotal/GST/total, serializes to one hidden JSON field the server parses with `lib/billing/schema.ts`.
 
-**Not built:** inventory/stock tracking. What "stock" means differs completely between a rental business (the vehicles themselves) and a service center (parts/consumables) — building either without knowing which this is would mean guessing at a data model. See `ROADMAP.md` Phase 4 for the reasoning.
+## Inventory
+
+Two separate features, not one — "stock" means different things for a rental business (the vehicles themselves) and a service center (parts/consumables), so they get different data models rather than one forced-generic "inventory" table:
+
+- **Vehicles** (`/vehicles`) — fleet tracked by `status` (`available`/`rented`/`maintenance`/`retired`), set manually by staff. A lead can be linked to a vehicle (`leads.vehicleId`) once one's assigned; the Vehicle card on a lead's detail page only shows up once the org has added at least one vehicle. No date-based availability/conflict checking — status is the whole model. Registration numbers are unique per org.
+- **Stock items** (`/inventory`) — parts/consumables tracked by `quantityOnHand` vs. `lowStockThreshold`. Every change (restock/usage/adjustment) writes a `stock_movements` row rather than only updating the count, so there's an audit trail (`app/(app)/inventory/actions.ts#recordStockMovement`). Not linked to invoice line items yet — invoice line items are still freeform text.
+- **Low-stock alerts** — the daily cron flags anything at or below threshold with an in-app notification to the owner (`low_stock` kind), deduped weekly rather than daily.
 
 ## Scripts
 
@@ -96,6 +102,8 @@ app/
     dashboard/
     leads/            Lead pipeline: page.tsx (server) + pipeline-board.tsx (client) + actions.ts
     customers/
+    vehicles/            Rental fleet, tracked by status — see "Inventory" below
+    inventory/            Parts/consumables, tracked by quantity — see "Inventory" below
     quotations/         Quotations list/create/detail — see "Billing" below
     invoices/            Invoices list/create/detail + payment recording
     campaigns/         Retention broadcast tool

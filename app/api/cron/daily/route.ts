@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { and, eq, isNotNull, isNull, lte, notInArray, or } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lte, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { customers, leads, organizations, profiles } from "@/db/schema";
+import { customers, leads, organizations, profiles, stockItems } from "@/db/schema";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { renderReminderMessage } from "@/lib/whatsapp/templates";
 import { notify } from "@/lib/notifications";
@@ -12,6 +12,7 @@ import { notify } from "@/lib/notifications";
 //   1. Service/rental retention reminders (WhatsApp)
 //   2. In-app "follow-up due" nudges for leads
 //   3. In-app "stale lead" nudges (no update in org.staleLeadDays days)
+//   4. In-app "low stock" nudges for the owner
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (secret) {
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
     serviceReminders: 0,
     followUpNudges: 0,
     staleLeadNudges: 0,
+    lowStockNudges: 0,
   };
 
   // Cache each org's owner profile (fallback notification target for
@@ -154,6 +156,38 @@ export async function GET(request: NextRequest) {
       dedupeWithinHours: lead.staleLeadDays * 24 - 4,
     });
     results.staleLeadNudges += 1;
+  }
+
+  // 4. Low-stock nudges — notify the owner, dedupe weekly (a restock reminder
+  // firing every single day for the same low item would just get ignored)
+  const lowStock = await db
+    .select({
+      id: stockItems.id,
+      orgId: stockItems.orgId,
+      name: stockItems.name,
+      quantityOnHand: stockItems.quantityOnHand,
+      lowStockThreshold: stockItems.lowStockThreshold,
+      unit: stockItems.unit,
+    })
+    .from(stockItems)
+    .where(sql`${stockItems.quantityOnHand} <= ${stockItems.lowStockThreshold}`);
+
+  for (const item of lowStock) {
+    const profileId = await resolveOwnerId(item.orgId);
+    if (!profileId) continue;
+
+    await notify({
+      orgId: item.orgId,
+      profileId,
+      kind: "low_stock",
+      title: `${item.name} is running low`,
+      body: `${item.quantityOnHand} ${item.unit} left (alert threshold: ${item.lowStockThreshold}).`,
+      link: `/inventory/${item.id}`,
+      sourceType: "stock_item",
+      sourceId: item.id,
+      dedupeWithinHours: 24 * 7,
+    });
+    results.lowStockNudges += 1;
   }
 
   return NextResponse.json(results);

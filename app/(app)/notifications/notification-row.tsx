@@ -10,6 +10,7 @@ const KIND_LABEL: Record<string, string> = {
   follow_up_due: "Follow-up due",
   stale_lead: "Stale lead",
   service_due: "Service due",
+  low_stock: "Low stock",
   system: "System",
 };
 

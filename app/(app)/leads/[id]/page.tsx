@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/db";
-import { leadActivities, leads, profiles } from "@/db/schema";
+import { leadActivities, leads, profiles, vehicles } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { AssigneeSelect } from "./assignee-select";
 import { ActivityTimeline } from "./activity-timeline";
 import { ConvertDialog } from "./convert-dialog";
 import { NotifyReadyButton } from "./notify-ready-button";
+import { VehicleSelect } from "./vehicle-select";
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,7 +27,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
   if (!lead) notFound();
 
-  const [orgProfiles, activities] = await Promise.all([
+  const [orgProfiles, activities, orgVehicles] = await Promise.all([
     db.select({ id: profiles.id, fullName: profiles.fullName }).from(profiles).where(eq(profiles.orgId, user.orgId)),
     db
       .select({
@@ -40,6 +41,10 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       .leftJoin(profiles, eq(leadActivities.authorId, profiles.id))
       .where(eq(leadActivities.leadId, id))
       .orderBy(desc(leadActivities.createdAt)),
+    db
+      .select({ id: vehicles.id, registrationNumber: vehicles.registrationNumber })
+      .from(vehicles)
+      .where(eq(vehicles.orgId, user.orgId)),
   ]);
 
   return (
@@ -80,6 +85,14 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                 Create quotation
               </ButtonLink>
             </Card>
+            {orgVehicles.length > 0 ? (
+              <Card className="p-5">
+                <h2 className="font-display text-sm font-bold">Vehicle</h2>
+                <div className="mt-3">
+                  <VehicleSelect leadId={lead.id} vehicles={orgVehicles} currentVehicleId={lead.vehicleId} />
+                </div>
+              </Card>
+            ) : null}
             <Card className="p-5">
               <h2 className="font-display text-sm font-bold">Assigned to</h2>
               <div className="mt-3">

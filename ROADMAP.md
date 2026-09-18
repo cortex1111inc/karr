@@ -89,13 +89,18 @@ The pattern (typed provider interface + DB-backed per-org credentials + encrypte
 - [x] Invoice creation (GST + non-GST) — `/invoices`, from scratch or prefilled from a customer (`/invoices/new?customerId=`); public link at `/invoice/[token]`
 - [x] Payment tracking — record/remove payments against an invoice; status auto-computed (draft/sent → partial → paid) from `amountPaid` vs `total`, never set by hand
 - [x] Billing history per customer — Billing card on the customer detail page, linked invoices with status + total
-- [ ] Inventory/stock tracking — **still not built, deliberately.** This item was already flagged "optional — validate demand before building," and that caveat turned out to be load-bearing: what "stock" even means differs completely between a rental business (the vehicles themselves — availability calendars, not consumable counts) and a service center (parts/consumables — reorder points, supplier costs). Building either without knowing which this is would be guessing at a data model, not shipping a feature. Ask when there's a concrete need and which shape it should take.
+- [x] Inventory/stock tracking — built as **two separate features**, once it was confirmed the business needs both: a rental fleet tracker (`/vehicles`) and a parts/consumables tracker (`/inventory`). See below.
 
 **Design notes:**
 - Quotations and invoices are separate tables, not one "documents" table with a type flag — their lifecycles genuinely differ (a quotation is draft/sent/accepted/declined; an invoice additionally tracks payment). Converting a quotation copies it into a new invoice row rather than mutating in place, so the original quote stays intact.
 - Money is stored as `numeric(12,2)`, not floats — line-item amounts and document totals are computed once server-side (`lib/billing/money.ts`) and persisted, never recalculated live from history.
 - Document numbers (`QUO-0001`, `INV-0001`) come from a per-org counter incremented in one atomic `UPDATE ... RETURNING` (`lib/billing/numbering.ts`) — safe against two staff creating documents at the same moment, no gaps-vs-races tradeoff to reason about.
 - The line-item editor (`components/billing/line-items-editor.tsx`) is shared between quotations and invoices — add/remove rows, live subtotal/GST/total, one hidden JSON field the server parses with the same Zod schema either document type uses.
+
+**Inventory — two tracks, genuinely different data models:**
+- **Vehicles** (`/vehicles`) — fleet by status (`available`/`rented`/`maintenance`/`retired`), manually set by staff. A lead can be linked to a specific vehicle once assigned (`leads.vehicleId`) — the Vehicle card only appears on a lead once the org has added at least one vehicle, so a service-only business never sees it. No availability calendar/date-conflict checking — status is the whole model for now; add a calendar if double-booking becomes an actual problem, not before.
+- **Stock items** (`/inventory`) — quantity by count (`quantityOnHand`, `lowStockThreshold`). Every change (restock/usage/adjustment) is logged to `stock_movements` rather than only mutating the count directly, so there's an audit trail. Not yet linked to invoice line items (i.e. creating an invoice doesn't auto-decrement stock) — that's a natural next step once/if it's wanted, but line items today are freeform text, not references to stock items.
+- **Low-stock alerts** — the daily cron flags any item at or below its threshold with an in-app notification to the owner, deduped weekly (not daily — a standing low-stock condition doesn't need a fresh nudge every single day).
 
 ---
 

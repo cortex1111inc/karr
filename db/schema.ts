@@ -110,6 +110,9 @@ export const leads = pgTable(
     orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
     customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
     assignedTo: uuid("assigned_to").references(() => profiles.id, { onDelete: "set null" }),
+    // Optional — only meaningful for rental bookings. A lead can be linked
+    // to a specific fleet vehicle once one's assigned.
+    vehicleId: uuid("vehicle_id").references(() => vehicles.id, { onDelete: "set null" }),
     contactName: text("contact_name").notNull(),
     contactPhone: text("contact_phone").notNull(),
     interest: text("interest").notNull(),
@@ -220,6 +223,7 @@ export const leadsRelations = relations(leads, ({ one, many }) => ({
   organization: one(organizations, { fields: [leads.orgId], references: [organizations.id] }),
   customer: one(customers, { fields: [leads.customerId], references: [customers.id] }),
   assignee: one(profiles, { fields: [leads.assignedTo], references: [profiles.id] }),
+  vehicle: one(vehicles, { fields: [leads.vehicleId], references: [vehicles.id] }),
   activities: many(leadActivities),
 }));
 
@@ -243,6 +247,7 @@ export const notificationKindEnum = pgEnum("notification_kind", [
   "follow_up_due",
   "stale_lead",
   "service_due",
+  "low_stock",
   "system",
 ]);
 
@@ -452,4 +457,87 @@ export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
 export const paymentsRelations = relations(payments, ({ one }) => ({
   invoice: one(invoices, { fields: [payments.invoiceId], references: [invoices.id] }),
   recordedByProfile: one(profiles, { fields: [payments.recordedBy], references: [profiles.id] }),
+}));
+
+// ===== Inventory (Phase 4 addendum) =====
+//
+// Two genuinely different data models under one "inventory" heading:
+// a rental fleet (vehicles, tracked by status) and parts/consumables
+// (stock items, tracked by quantity). A business can use either, both,
+// or neither — nothing here assumes which.
+
+export const vehicleStatusEnum = pgEnum("vehicle_status", ["available", "rented", "maintenance", "retired"]);
+
+export const vehicles = pgTable(
+  "vehicles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    registrationNumber: text("registration_number").notNull(),
+    make: text("make"),
+    model: text("model"),
+    category: text("category"),
+    status: vehicleStatusEnum("status").notNull().default("available"),
+    dailyRate: numeric("daily_rate", { precision: 10, scale: 2 }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("vehicles_org_idx").on(table.orgId),
+    uniqueIndex("vehicles_org_reg_idx").on(table.orgId, table.registrationNumber),
+  ],
+);
+
+export const vehiclesRelations = relations(vehicles, ({ one, many }) => ({
+  organization: one(organizations, { fields: [vehicles.orgId], references: [organizations.id] }),
+  leads: many(leads),
+}));
+
+export const stockMovementTypeEnum = pgEnum("stock_movement_type", ["restock", "usage", "adjustment"]);
+
+export const stockItems = pgTable(
+  "stock_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    sku: text("sku"),
+    unit: text("unit").notNull().default("pcs"),
+    quantityOnHand: integer("quantity_on_hand").notNull().default(0),
+    lowStockThreshold: integer("low_stock_threshold").notNull().default(5),
+    costPrice: numeric("cost_price", { precision: 10, scale: 2 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("stock_items_org_idx").on(table.orgId)],
+);
+
+// Every quantity change (restock, usage, manual adjustment) is logged here
+// rather than only mutating stockItems.quantityOnHand directly, so there's
+// an audit trail of where stock went.
+export const stockMovements = pgTable(
+  "stock_movements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    stockItemId: uuid("stock_item_id").notNull().references(() => stockItems.id, { onDelete: "cascade" }),
+    type: stockMovementTypeEnum("type").notNull(),
+    // Positive for restock, negative for usage; adjustment can be either.
+    quantity: integer("quantity").notNull(),
+    note: text("note"),
+    createdBy: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("stock_movements_item_idx").on(table.stockItemId)],
+);
+
+export const stockItemsRelations = relations(stockItems, ({ one, many }) => ({
+  organization: one(organizations, { fields: [stockItems.orgId], references: [organizations.id] }),
+  movements: many(stockMovements),
+}));
+
+export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
+  stockItem: one(stockItems, { fields: [stockMovements.stockItemId], references: [stockItems.id] }),
+  author: one(profiles, { fields: [stockMovements.createdBy], references: [profiles.id] }),
 }));
