@@ -54,7 +54,7 @@ Phases build on each other; within a phase, items are roughly in build order but
 - [x] Slot booking link — public page at `/book/[org-slug]`, no login
 - [x] Customer-facing status page — public page at `/status/[token]`, no login
 
-**WhatsApp is on the console-log fallback by design, for now** — decided to hold off wiring up real send until there's a Meta WhatsApp Business account to connect. Everything else runs end-to-end (messages logged, not sent). To go live: set `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_ACCESS_TOKEN` (see `.env.example`).
+**WhatsApp still isn't sending real messages, but connecting it no longer needs code.** Originally this was gated on someone editing Vercel env vars; now the workspace owner connects their own Meta WhatsApp Business account directly at **Settings → Integrations** (`/integrations`) — see the Integrations section below. Until that's done, everything still runs end-to-end on the console-log fallback (messages logged, not sent).
 `NEXT_PUBLIC_APP_URL` is unset but not blocking — `lib/site.ts` falls back to Vercel's `VERCEL_URL` automatically, so booking/status links in messages already resolve correctly in production. Only set it explicitly if a custom domain is added.
 
 ---
@@ -67,6 +67,19 @@ Phases build on each other; within a phase, items are roughly in build order but
 - [x] Activity/notification feed — `/notifications`, mark-one/mark-all read, deduped so the daily cron never spams the same still-true condition
 
 **Low-cost by design:** no new paid services added. Reused the existing Vercel Cron + Postgres + WhatsApp-abstraction infra from Phases 1–2. In-app notifications only for now — wiring staff WhatsApp/email alerts later just means calling the already-built `sendWhatsApp()` (or adding an email provider like Resend's free tier) from inside `notify()`, once there's a real reason to.
+
+---
+
+## Cross-phase — Integrations page (no-code connections)
+
+- [x] `integrations` table — per-org, per-provider credentials, encrypted at rest (`lib/crypto.ts`, AES-256-GCM)
+- [x] `/integrations` page — owner-only connect/update/disconnect form; staff see read-only status
+- [x] WhatsApp credential resolution updated: org's own connection → shared env-var fallback → console logging
+- [x] Access tokens are write-only in the UI — saved value is never sent back to the browser, only replaced
+
+This closes the gap where every external integration across Phases 1–3 (in practice, just WhatsApp so far) could only be configured by someone with Vercel/code access. **To actually connect WhatsApp:** sign in as the owner, go to Settings → Integrations, paste the Phone Number ID and Access Token from Meta Business Suite. No redeploy needed — takes effect on the next message sent.
+
+The pattern (typed provider interface + DB-backed per-org credentials + encrypted storage + write-only UI) is what to follow for the next integration, whatever it turns out to be (email, SMS, payments in Phase 4).
 
 ---
 

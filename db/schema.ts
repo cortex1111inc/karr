@@ -264,3 +264,31 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   organization: one(organizations, { fields: [notifications.orgId], references: [organizations.id] }),
   profile: one(profiles, { fields: [notifications.profileId], references: [profiles.id] }),
 }));
+
+export const integrationProviderEnum = pgEnum("integration_provider", ["whatsapp"]);
+
+// Per-org third-party integration credentials, entered through the
+// Integrations page (app/(app)/integrations) instead of environment
+// variables — so a business owner can connect their own account without
+// anyone touching code or Vercel settings. accessTokenEncrypted is
+// encrypted at rest (see lib/crypto.ts) and never sent back to the client
+// in plaintext once saved. lib/whatsapp/ checks here first, then falls
+// back to WHATSAPP_PHONE_NUMBER_ID/WHATSAPP_ACCESS_TOKEN env vars if unset.
+export const integrations = pgTable(
+  "integrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    provider: integrationProviderEnum("provider").notNull(),
+    phoneNumberId: text("phone_number_id"),
+    accessTokenEncrypted: text("access_token_encrypted"),
+    connectedAt: timestamp("connected_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("integrations_org_provider_idx").on(table.orgId, table.provider)],
+);
+
+export const integrationsRelations = relations(integrations, ({ one }) => ({
+  organization: one(organizations, { fields: [integrations.orgId], references: [organizations.id] }),
+}));

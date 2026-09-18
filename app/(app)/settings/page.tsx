@@ -6,7 +6,6 @@ import { requireUser } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/site";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { SettingsForm } from "./settings-form";
 import { CopyLinkButton } from "./copy-link-button";
 
@@ -14,7 +13,6 @@ export default async function SettingsPage() {
   const user = await requireUser();
 
   const [org] = await db.select().from(organizations).where(eq(organizations.id, user.orgId)).limit(1);
-  const whatsappConfigured = Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_ACCESS_TOKEN);
   const bookingUrl = `${getSiteUrl()}/book/${org.slug}`;
 
   return (
@@ -48,17 +46,11 @@ export default async function SettingsPage() {
           </Card>
 
           <Card className="p-5">
-            <h2 className="font-display text-sm font-bold">WhatsApp</h2>
-            <div className="mt-2 flex items-center gap-2">
-              <Badge tone={whatsappConfigured ? "accent" : "neutral"}>
-                {whatsappConfigured ? "Connected" : "Not connected"}
-              </Badge>
-            </div>
-            <p className="mt-2 text-sm text-muted">
-              {whatsappConfigured
-                ? "Messages send via the WhatsApp Cloud API."
-                : "No WhatsApp credentials set — messages are logged instead of sent. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN to go live (see .env.example)."}
-            </p>
+            <h2 className="font-display text-sm font-bold">Integrations</h2>
+            <p className="mt-0.5 text-sm text-muted">Connect WhatsApp and other third-party services.</p>
+            <Link href="/integrations" className="mt-3 inline-block text-sm font-medium text-accent-deep hover:underline">
+              Manage integrations →
+            </Link>
           </Card>
 
           <Card className="p-5">

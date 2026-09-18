@@ -24,6 +24,7 @@ CRM, lead management, retention and billing for car rental and service businesse
    - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Project Settings → API
    - `DATABASE_URL` — Project Settings → Database → Connection string (URI)
    - `SUPABASE_SERVICE_ROLE_KEY` — Project Settings → API (server-only: `db/seed.ts` and staff invites)
+   - `INTEGRATIONS_ENCRYPTION_KEY` — required for the Integrations page to work (generate with `openssl rand -hex 32`).
    - `WHATSAPP_PHONE_NUMBER_ID` / `WHATSAPP_ACCESS_TOKEN` and `CRON_SECRET` are optional — see "WhatsApp & retention" below.
 3. Install dependencies and apply the schema — see `db/MIGRATIONS.md` (`db:push` doesn't work against this project's Supabase instance).
 4. Create your first user in the Supabase dashboard (Authentication → Users → Add user), then link them to a workspace:
@@ -36,13 +37,17 @@ CRM, lead management, retention and billing for car rental and service businesse
    ```
    Sign in at `http://localhost:3000/login`.
 
-## WhatsApp & retention
+## Integrations
 
-Every outbound WhatsApp message (booking confirmation, ready-for-pickup, service reminders, campaigns) goes through `lib/whatsapp/sendWhatsApp()`, which:
+Third-party credentials (currently: WhatsApp) are connected through **Settings → Integrations** (`/integrations`) — no code or redeploy needed. The owner pastes a Phone Number ID + Access Token there; it's encrypted (`lib/crypto.ts`, AES-256-GCM, key from `INTEGRATIONS_ENCRYPTION_KEY`) and stored in the `integrations` table, one row per org per provider. The saved token is never sent back to the browser — the form only ever accepts a new one, never displays the old one.
 
-- Sends via the **WhatsApp Cloud API** if `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_ACCESS_TOKEN` are set ([setup guide](https://developers.facebook.com/docs/whatsapp/cloud-api/get-started)).
-- Otherwise logs to the console (`ConsoleProvider`) — every retention feature still works end-to-end for development/demo without a live WhatsApp account.
-- Always writes an audit row to the `whatsapp_messages` table either way, visible on each customer's detail page.
+Every outbound WhatsApp message (booking confirmation, ready-for-pickup, service reminders, campaigns) goes through `lib/whatsapp/sendWhatsApp()`, which resolves credentials in this order:
+
+1. **This org's own connection**, from the Integrations page.
+2. **Shared fallback** — `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_ACCESS_TOKEN` env vars, if set (useful for a single-tenant deploy, or as a default before any org connects their own).
+3. **Console logging** (`ConsoleProvider`) — every retention feature still works end-to-end for development/demo without any live WhatsApp account.
+
+Always writes an audit row to the `whatsapp_messages` table regardless of which path was used, visible on each customer's detail page.
 
 The daily job lives at `app/api/cron/daily/route.ts`, scheduled via `vercel.json`. It's one consolidated route (service reminders + lead follow-up/stale nudges) rather than one cron per concern, to stay within Vercel's free-tier cron quota. Protect it in production by setting `CRON_SECRET` (Vercel sends it automatically as a bearer token when the env var is present); without it the route runs unauthenticated, which is fine for local testing only.
 
@@ -79,6 +84,7 @@ app/
     customers/
     campaigns/         Retention broadcast tool
     notifications/      In-app task reminders — mark read/mark all, fed by the daily cron
+    integrations/        Connect third-party services through the UI (WhatsApp today) — no code/redeploy
     settings/           Org settings (booking link, reminder config, stale-lead threshold) + settings/team (staff)
 db/
   schema.ts           Drizzle schema — source of truth for the data model
@@ -88,8 +94,9 @@ db/
 lib/
   auth.ts             requireUser() — resolves the session to an org-scoped profile
   supabase/           Supabase clients: client.ts (browser), server.ts (RSC/actions), proxy.ts (proxy.ts helper), admin.ts (service-role, staff invites)
-  whatsapp/            Provider abstraction (cloud-provider.ts, console-provider.ts) + sendWhatsApp() + templates.ts
+  whatsapp/            Provider abstraction (cloud-provider.ts, console-provider.ts) + sendWhatsApp() + templates.ts — checks integrations table first, then env vars
   notifications.ts      notify() — creates an in-app notification, deduped by source+kind+profile
+  crypto.ts             encryptSecret()/decryptSecret() — AES-256-GCM, used to store integration credentials at rest
   slug.ts / tokens.ts / site.ts   Small helpers: org slugs, public tokens, site URL resolution
   utils.ts            cn() class-merging helper
 components/
@@ -109,6 +116,7 @@ drizzle.config.ts     drizzle-kit config
 - **`components/ui/` stays framework-free.** Primitives take `className` and forward props; no business logic, no data fetching.
 - **Validate at the boundary.** Server Actions parse `FormData` with Zod before touching the database; trust the parsed value everywhere downstream.
 - **External sends go through an interface, not a direct API call.** `lib/whatsapp/` is the pattern to follow if another channel (SMS, email) gets added — a typed interface, a real provider, a no-op/logging fallback, one audit table.
+- **Third-party credentials belong on the Integrations page, not in env vars.** Env vars (`WHATSAPP_PHONE_NUMBER_ID` etc.) are a shared fallback only — the per-org path is a row in `integrations`, entered through `/integrations`, encrypted with `lib/crypto.ts` before it touches the database. When adding a new integration, follow this pattern rather than reaching for another env var.
 - **Design tokens live in `app/globals.css`.** Colors, fonts — change the palette there, not by hardcoding hex values in components.
 
 ## Adding a new feature
