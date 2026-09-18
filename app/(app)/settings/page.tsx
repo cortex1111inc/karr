@@ -34,12 +34,16 @@ export default async function SettingsPage() {
           </Card>
 
           <Card className="p-5">
-            <h2 className="font-display text-sm font-bold">Customer retention</h2>
+            <h2 className="font-display text-sm font-bold">Retention &amp; follow-up automation</h2>
             <p className="mt-0.5 text-sm text-muted">
-              How many days after a booking before a customer gets an automatic follow-up reminder.
+              When customers get a service reminder, and when staff get nudged about leads going quiet.
             </p>
             <div className="mt-4">
-              <SettingsForm serviceIntervalDays={org.serviceIntervalDays} reminderMessage={org.reminderMessage} />
+              <SettingsForm
+                serviceIntervalDays={org.serviceIntervalDays}
+                reminderMessage={org.reminderMessage}
+                staleLeadDays={org.staleLeadDays}
+              />
             </div>
           </Card>
 

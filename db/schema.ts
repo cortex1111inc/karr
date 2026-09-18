@@ -28,6 +28,9 @@ export const organizations = pgTable(
     // Custom WhatsApp copy for the retention reminder cron. Falls back to a
     // generic message (see lib/whatsapp/templates.ts) when unset.
     reminderMessage: text("reminder_message"),
+    // A lead with no activity/update for this many days (stage not
+    // booked/lost) gets an in-app "stale lead" nudge from the daily cron.
+    staleLeadDays: integer("stale_lead_days").notNull().default(5),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("organizations_slug_idx").on(table.slug)],
@@ -224,4 +227,40 @@ export const whatsappMessagesRelations = relations(whatsappMessages, ({ one }) =
 export const campaignsRelations = relations(campaigns, ({ one }) => ({
   organization: one(organizations, { fields: [campaigns.orgId], references: [organizations.id] }),
   creator: one(profiles, { fields: [campaigns.createdBy], references: [profiles.id] }),
+}));
+
+export const notificationKindEnum = pgEnum("notification_kind", [
+  "follow_up_due",
+  "stale_lead",
+  "service_due",
+  "system",
+]);
+
+// In-app task reminders, populated by the daily cron (app/api/cron/daily).
+// sourceType/sourceId (e.g. "lead" + leads.id) let the cron avoid creating
+// duplicate notifications for the same underlying condition on every run.
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    profileId: uuid("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+    kind: notificationKindEnum("kind").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    link: text("link"),
+    sourceType: text("source_type"),
+    sourceId: uuid("source_id"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("notifications_profile_unread_idx").on(table.profileId, table.readAt),
+    index("notifications_source_idx").on(table.sourceType, table.sourceId, table.kind),
+  ],
+);
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  organization: one(organizations, { fields: [notifications.orgId], references: [organizations.id] }),
+  profile: one(profiles, { fields: [notifications.profileId], references: [profiles.id] }),
 }));

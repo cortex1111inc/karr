@@ -61,10 +61,12 @@ Phases build on each other; within a phase, items are roughly in build order but
 
 ## Phase 3 — Automation
 
-- [ ] Notification/reminder engine (scheduled jobs — evaluate Vercel Cron vs. Supabase Edge Functions + pg_cron)
-- [ ] Task reminders for staff (e.g. "follow up with lead X today") — in-app + optional WhatsApp/email
-- [ ] Configurable follow-up workflows (e.g. auto-nudge a lead untouched for N days)
-- [ ] Activity/notification feed (in-app, per user)
+- [x] Notification/reminder engine — one consolidated Vercel Cron job (`/api/cron/daily`), deliberately kept to a single route to stay within free-tier cron quotas rather than one job per concern
+- [x] Task reminders for staff — in-app only for now (`notifications` table, sidebar unread badge, `/notifications` page); WhatsApp/email left as a later add-on, see note below
+- [x] Configurable follow-up workflows — org-editable `staleLeadDays` (Settings page); a lead untouched that long (stage not booked/lost) gets an in-app nudge for its assignee, or the owner if unassigned
+- [x] Activity/notification feed — `/notifications`, mark-one/mark-all read, deduped so the daily cron never spams the same still-true condition
+
+**Low-cost by design:** no new paid services added. Reused the existing Vercel Cron + Postgres + WhatsApp-abstraction infra from Phases 1–2. In-app notifications only for now — wiring staff WhatsApp/email alerts later just means calling the already-built `sendWhatsApp()` (or adding an email provider like Resend's free tier) from inside `notify()`, once there's a real reason to.
 
 ---
 

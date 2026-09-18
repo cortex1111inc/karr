@@ -1,9 +1,17 @@
+import { and, count, eq, isNull } from "drizzle-orm";
+import { db } from "@/db";
+import { notifications } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { NavLinks } from "./nav-links";
 import { SignOutButton } from "./sign-out-button";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+
+  const [unread] = await db
+    .select({ value: count() })
+    .from(notifications)
+    .where(and(eq(notifications.profileId, user.id), isNull(notifications.readAt)));
 
   return (
     <div className="flex min-h-full flex-1 bg-background">
@@ -20,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <span className="font-display text-sm font-bold">Vanspire OS</span>
         </div>
 
-        <NavLinks />
+        <NavLinks unreadCount={unread?.value ?? 0} />
 
         <div className="mt-auto flex items-center justify-between gap-2 border-t border-border px-2 pt-4">
           <div className="min-w-0">

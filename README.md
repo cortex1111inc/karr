@@ -44,7 +44,11 @@ Every outbound WhatsApp message (booking confirmation, ready-for-pickup, service
 - Otherwise logs to the console (`ConsoleProvider`) — every retention feature still works end-to-end for development/demo without a live WhatsApp account.
 - Always writes an audit row to the `whatsapp_messages` table either way, visible on each customer's detail page.
 
-The daily reminder job lives at `app/api/cron/service-reminders/route.ts`, scheduled via `vercel.json`. Protect it in production by setting `CRON_SECRET` (Vercel sends it automatically as a bearer token when the env var is present); without it the route runs unauthenticated, which is fine for local testing only.
+The daily job lives at `app/api/cron/daily/route.ts`, scheduled via `vercel.json`. It's one consolidated route (service reminders + lead follow-up/stale nudges) rather than one cron per concern, to stay within Vercel's free-tier cron quota. Protect it in production by setting `CRON_SECRET` (Vercel sends it automatically as a bearer token when the env var is present); without it the route runs unauthenticated, which is fine for local testing only.
+
+## In-app notifications
+
+Staff get in-app nudges (sidebar unread badge, `/notifications` page) for two things the daily cron checks: a lead's `followUpAt` has arrived, or a lead has had no update in `organizations.staleLeadDays` days (both configurable per org in Settings). `lib/notifications.ts`'s `notify()` dedupes so the same still-true condition doesn't re-notify on every run. No email/SMS yet — see the WhatsApp note above for the pattern to extend this with a real channel later.
 
 `NEXT_PUBLIC_APP_URL` controls the domain used in links sent inside WhatsApp messages (booking status links). On Vercel it falls back to `VERCEL_URL` automatically if unset.
 
@@ -68,13 +72,14 @@ app/
   login/              Public sign-in route (see proxy.ts for the auth gate)
   book/[slug]/         Public slot-booking page, one per org (organizations.slug) — no auth
   status/[token]/       Public booking-status page, one per lead (leads.publicToken) — no auth
-  api/cron/            Scheduled jobs (Route Handlers), auth'd via CRON_SECRET bearer token
+  api/cron/daily/       The one scheduled job (Route Handler), auth'd via CRON_SECRET bearer token
   (app)/              Authenticated app shell — layout.tsx calls requireUser()
     dashboard/
     leads/            Lead pipeline: page.tsx (server) + pipeline-board.tsx (client) + actions.ts
     customers/
     campaigns/         Retention broadcast tool
-    settings/           Org settings (booking link, reminder config) + settings/team (staff)
+    notifications/      In-app task reminders — mark read/mark all, fed by the daily cron
+    settings/           Org settings (booking link, reminder config, stale-lead threshold) + settings/team (staff)
 db/
   schema.ts           Drizzle schema — source of truth for the data model
   index.ts            Drizzle client (server-only)
@@ -84,6 +89,7 @@ lib/
   auth.ts             requireUser() — resolves the session to an org-scoped profile
   supabase/           Supabase clients: client.ts (browser), server.ts (RSC/actions), proxy.ts (proxy.ts helper), admin.ts (service-role, staff invites)
   whatsapp/            Provider abstraction (cloud-provider.ts, console-provider.ts) + sendWhatsApp() + templates.ts
+  notifications.ts      notify() — creates an in-app notification, deduped by source+kind+profile
   slug.ts / tokens.ts / site.ts   Small helpers: org slugs, public tokens, site URL resolution
   utils.ts            cn() class-merging helper
 components/

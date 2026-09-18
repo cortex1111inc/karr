@@ -15,6 +15,7 @@ const settingsSchema = z.object({
     .max(1000, "Keep it under 1000 characters")
     .optional()
     .transform((value) => value || null),
+  staleLeadDays: z.coerce.number().int().min(1, "Must be at least 1 day").max(90, "Must be 90 days or fewer"),
 });
 
 export async function updateOrgSettings(_prevState: { error: string | null }, formData: FormData) {
@@ -27,6 +28,7 @@ export async function updateOrgSettings(_prevState: { error: string | null }, fo
   const parsed = settingsSchema.safeParse({
     serviceIntervalDays: formData.get("serviceIntervalDays"),
     reminderMessage: formData.get("reminderMessage"),
+    staleLeadDays: formData.get("staleLeadDays"),
   });
 
   if (!parsed.success) {
