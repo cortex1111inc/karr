@@ -37,9 +37,14 @@ export async function saveWhatsAppIntegration(_prevState: { error: string | null
 
   // Blank token field means "keep the one already saved" — the form never
   // shows the real token back, so an empty submit shouldn't erase it.
-  const accessTokenEncrypted = parsed.data.accessToken
-    ? encryptSecret(parsed.data.accessToken)
-    : existing?.accessTokenEncrypted;
+  let accessTokenEncrypted: string | null | undefined;
+  try {
+    accessTokenEncrypted = parsed.data.accessToken
+      ? encryptSecret(parsed.data.accessToken)
+      : existing?.accessTokenEncrypted;
+  } catch {
+    return { error: "Integrations aren't configured on this server yet (missing INTEGRATIONS_ENCRYPTION_KEY)." };
+  }
 
   if (!accessTokenEncrypted) {
     return { error: "Access Token is required." };

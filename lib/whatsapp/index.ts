@@ -5,7 +5,7 @@ import { integrations, whatsappMessageKindEnum, whatsappMessages } from "@/db/sc
 import { decryptSecret } from "@/lib/crypto";
 import { CloudApiProvider } from "./cloud-provider";
 import { ConsoleProvider } from "./console-provider";
-import type { WhatsAppProvider } from "./types";
+import type { WhatsAppProvider, WhatsAppSendResult } from "./types";
 
 // Resolution order: this org's own credentials (saved via the Integrations
 // page) → shared env-var fallback → console logging. Per-org credentials
@@ -19,7 +19,15 @@ async function getProvider(orgId: string): Promise<WhatsAppProvider> {
     .limit(1);
 
   if (connected?.phoneNumberId && connected.accessTokenEncrypted) {
-    return new CloudApiProvider(connected.phoneNumberId, decryptSecret(connected.accessTokenEncrypted));
+    // Decryption can fail if INTEGRATIONS_ENCRYPTION_KEY is missing/rotated
+    // since this row was saved — fall through to the env-var/console path
+    // rather than throwing, so a WhatsApp misconfiguration never blocks the
+    // primary action (e.g. converting a lead) that triggered the send.
+    try {
+      return new CloudApiProvider(connected.phoneNumberId, decryptSecret(connected.accessTokenEncrypted));
+    } catch {
+      // fall through
+    }
   }
 
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -43,10 +51,17 @@ export type SendWhatsAppInput = {
 
 // Sends via whichever provider is configured (or logs to console in dev)
 // and always writes an audit row to `whatsapp_messages`, so retention
-// activity is visible in the app either way.
-export async function sendWhatsApp(input: SendWhatsAppInput) {
-  const provider = await getProvider(input.orgId);
-  const result = await provider.send(input.to, input.body);
+// activity is visible in the app either way. Never throws — a WhatsApp
+// failure shouldn't take down the feature (lead conversion, campaign send,
+// etc.) that triggered it; callers get {ok:false} back instead.
+export async function sendWhatsApp(input: SendWhatsAppInput): Promise<WhatsAppSendResult> {
+  let result: WhatsAppSendResult;
+  try {
+    const provider = await getProvider(input.orgId);
+    result = await provider.send(input.to, input.body);
+  } catch (error) {
+    result = { ok: false, error: error instanceof Error ? error.message : "Unknown WhatsApp send error" };
+  }
 
   await db.insert(whatsappMessages).values({
     orgId: input.orgId,
