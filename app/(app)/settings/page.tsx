@@ -7,7 +7,8 @@ import { getSiteUrl } from "@/lib/site";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { SettingsForm } from "./settings-form";
-import { CopyLinkButton } from "./copy-link-button";
+import { BillingSettingsForm } from "./billing-settings-form";
+import { CopyLinkButton } from "@/components/ui/copy-link-button";
 
 export default async function SettingsPage() {
   const user = await requireUser();
@@ -42,6 +43,14 @@ export default async function SettingsPage() {
                 reminderMessage={org.reminderMessage}
                 staleLeadDays={org.staleLeadDays}
               />
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <h2 className="font-display text-sm font-bold">Billing defaults</h2>
+            <p className="mt-0.5 text-sm text-muted">Pre-fills GST on new quotations and invoices — still editable per document.</p>
+            <div className="mt-4">
+              <BillingSettingsForm defaultGstRate={org.defaultGstRate} />
             </div>
           </Card>
 

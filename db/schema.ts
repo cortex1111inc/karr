@@ -3,6 +3,8 @@ import {
   uuid,
   text,
   integer,
+  numeric,
+  boolean,
   timestamp,
   pgEnum,
   index,
@@ -31,6 +33,14 @@ export const organizations = pgTable(
     // A lead with no activity/update for this many days (stage not
     // booked/lost) gets an in-app "stale lead" nudge from the daily cron.
     staleLeadDays: integer("stale_lead_days").notNull().default(5),
+    // Per-org running counters for human-readable document numbers
+    // (QUO-0001, INV-0001). Incremented atomically in one UPDATE ... RETURNING
+    // right before each insert — see lib/billing/numbering.ts.
+    quotationCounter: integer("quotation_counter").notNull().default(0),
+    invoiceCounter: integer("invoice_counter").notNull().default(0),
+    // Default GST rate (%) pre-filled on new quotations/invoices when GST is
+    // enabled. Org can still override per-document.
+    defaultGstRate: integer("default_gst_rate").notNull().default(18),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("organizations_slug_idx").on(table.slug)],
@@ -291,4 +301,155 @@ export const integrations = pgTable(
 
 export const integrationsRelations = relations(integrations, ({ one }) => ({
   organization: one(organizations, { fields: [integrations.orgId], references: [organizations.id] }),
+}));
+
+// ===== Billing (Phase 4) =====
+//
+// Quotations and invoices are separate tables (not one "documents" table
+// with a type flag) because their lifecycles genuinely differ — a
+// quotation is draft/sent, an invoice additionally tracks payment status —
+// and a quotation converts into a new invoice row rather than mutating in
+// place, preserving the original quote. Both carry their own line items
+// and public share token, following the same pattern as leads.publicToken.
+
+export const quotationStatusEnum = pgEnum("quotation_status", ["draft", "sent", "accepted", "declined"]);
+
+export const quotations = pgTable(
+  "quotations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
+    customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+    number: text("number").notNull(),
+    status: quotationStatusEnum("status").notNull().default("draft"),
+    contactName: text("contact_name").notNull(),
+    contactPhone: text("contact_phone").notNull(),
+    notes: text("notes"),
+    gstEnabled: boolean("gst_enabled").notNull().default(false),
+    gstRate: integer("gst_rate").notNull().default(0),
+    subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull().default("0"),
+    taxAmount: numeric("tax_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    total: numeric("total", { precision: 12, scale: 2 }).notNull().default("0"),
+    publicToken: text("public_token").notNull(),
+    createdBy: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("quotations_org_idx").on(table.orgId),
+    uniqueIndex("quotations_org_number_idx").on(table.orgId, table.number),
+    uniqueIndex("quotations_public_token_idx").on(table.publicToken),
+  ],
+);
+
+export const quotationItems = pgTable(
+  "quotation_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    quotationId: uuid("quotation_id").notNull().references(() => quotations.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull().default("1"),
+    unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull().default("0"),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (table) => [index("quotation_items_quotation_idx").on(table.quotationId)],
+);
+
+export const invoiceStatusEnum = pgEnum("invoice_status", ["draft", "sent", "partial", "paid", "void"]);
+
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
+    quotationId: uuid("quotation_id").references(() => quotations.id, { onDelete: "set null" }),
+    number: text("number").notNull(),
+    status: invoiceStatusEnum("status").notNull().default("draft"),
+    contactName: text("contact_name").notNull(),
+    contactPhone: text("contact_phone").notNull(),
+    notes: text("notes"),
+    gstEnabled: boolean("gst_enabled").notNull().default(false),
+    gstRate: integer("gst_rate").notNull().default(0),
+    subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull().default("0"),
+    taxAmount: numeric("tax_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    total: numeric("total", { precision: 12, scale: 2 }).notNull().default("0"),
+    // Denormalized running total from `payments`, kept in sync on every
+    // recordPayment() call — avoids summing payments on every read.
+    amountPaid: numeric("amount_paid", { precision: 12, scale: 2 }).notNull().default("0"),
+    publicToken: text("public_token").notNull(),
+    createdBy: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("invoices_org_idx").on(table.orgId),
+    index("invoices_customer_idx").on(table.customerId),
+    uniqueIndex("invoices_org_number_idx").on(table.orgId, table.number),
+    uniqueIndex("invoices_public_token_idx").on(table.publicToken),
+  ],
+);
+
+export const invoiceItems = pgTable(
+  "invoice_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull().default("1"),
+    unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull().default("0"),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (table) => [index("invoice_items_invoice_idx").on(table.invoiceId)],
+);
+
+export const paymentMethodEnum = pgEnum("payment_method", ["cash", "card", "upi", "bank_transfer", "other"]);
+
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    method: paymentMethodEnum("method").notNull().default("cash"),
+    notes: text("notes"),
+    recordedBy: uuid("recorded_by").references(() => profiles.id, { onDelete: "set null" }),
+    paidAt: timestamp("paid_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("payments_invoice_idx").on(table.invoiceId)],
+);
+
+export const quotationsRelations = relations(quotations, ({ one, many }) => ({
+  organization: one(organizations, { fields: [quotations.orgId], references: [organizations.id] }),
+  lead: one(leads, { fields: [quotations.leadId], references: [leads.id] }),
+  customer: one(customers, { fields: [quotations.customerId], references: [customers.id] }),
+  items: many(quotationItems),
+}));
+
+export const quotationItemsRelations = relations(quotationItems, ({ one }) => ({
+  quotation: one(quotations, { fields: [quotationItems.quotationId], references: [quotations.id] }),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  organization: one(organizations, { fields: [invoices.orgId], references: [organizations.id] }),
+  customer: one(customers, { fields: [invoices.customerId], references: [customers.id] }),
+  lead: one(leads, { fields: [invoices.leadId], references: [leads.id] }),
+  quotation: one(quotations, { fields: [invoices.quotationId], references: [quotations.id] }),
+  items: many(invoiceItems),
+  payments: many(payments),
+}));
+
+export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
+  invoice: one(invoices, { fields: [invoiceItems.invoiceId], references: [invoices.id] }),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  invoice: one(invoices, { fields: [payments.invoiceId], references: [invoices.id] }),
+  recordedByProfile: one(profiles, { fields: [payments.recordedBy], references: [profiles.id] }),
 }));

@@ -85,11 +85,17 @@ The pattern (typed provider interface + DB-backed per-org credentials + encrypte
 
 ## Phase 4 — Billing & Payments
 
-- [ ] Quotation creation (from a lead, PDF/shareable link)
-- [ ] Invoice creation (GST + non-GST), linked to a customer/booking
-- [ ] Payment tracking (paid/partial/unpaid status per invoice)
-- [ ] Billing history per customer
-- [ ] Basic inventory/stock tracking (optional — validate demand before building)
+- [x] Quotation creation — `/quotations`, from scratch or prefilled from a lead (`/quotations/new?leadId=`); shareable public link at `/quote/[token]`, no login
+- [x] Invoice creation (GST + non-GST) — `/invoices`, from scratch or prefilled from a customer (`/invoices/new?customerId=`); public link at `/invoice/[token]`
+- [x] Payment tracking — record/remove payments against an invoice; status auto-computed (draft/sent → partial → paid) from `amountPaid` vs `total`, never set by hand
+- [x] Billing history per customer — Billing card on the customer detail page, linked invoices with status + total
+- [ ] Inventory/stock tracking — **still not built, deliberately.** This item was already flagged "optional — validate demand before building," and that caveat turned out to be load-bearing: what "stock" even means differs completely between a rental business (the vehicles themselves — availability calendars, not consumable counts) and a service center (parts/consumables — reorder points, supplier costs). Building either without knowing which this is would be guessing at a data model, not shipping a feature. Ask when there's a concrete need and which shape it should take.
+
+**Design notes:**
+- Quotations and invoices are separate tables, not one "documents" table with a type flag — their lifecycles genuinely differ (a quotation is draft/sent/accepted/declined; an invoice additionally tracks payment). Converting a quotation copies it into a new invoice row rather than mutating in place, so the original quote stays intact.
+- Money is stored as `numeric(12,2)`, not floats — line-item amounts and document totals are computed once server-side (`lib/billing/money.ts`) and persisted, never recalculated live from history.
+- Document numbers (`QUO-0001`, `INV-0001`) come from a per-org counter incremented in one atomic `UPDATE ... RETURNING` (`lib/billing/numbering.ts`) — safe against two staff creating documents at the same moment, no gaps-vs-races tradeoff to reason about.
+- The line-item editor (`components/billing/line-items-editor.tsx`) is shared between quotations and invoices — add/remove rows, live subtotal/GST/total, one hidden JSON field the server parses with the same Zod schema either document type uses.
 
 ---
 

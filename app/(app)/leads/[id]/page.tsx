@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { EditLeadForm } from "./edit-lead-form";
 import { AssigneeSelect } from "./assignee-select";
 import { ActivityTimeline } from "./activity-timeline";
@@ -72,6 +73,13 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           </div>
 
           <div className="flex flex-col gap-4">
+            <Card className="p-5">
+              <h2 className="font-display text-sm font-bold">Quotation</h2>
+              <p className="mt-0.5 text-sm text-muted">Send a price estimate before booking is confirmed.</p>
+              <ButtonLink href={`/quotations/new?leadId=${lead.id}`} variant="ghost" size="sm" className="mt-3">
+                Create quotation
+              </ButtonLink>
+            </Card>
             <Card className="p-5">
               <h2 className="font-display text-sm font-bold">Assigned to</h2>
               <div className="mt-3">

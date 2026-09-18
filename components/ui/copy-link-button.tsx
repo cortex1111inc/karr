@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-export function CopyLinkButton({ url }: { url: string }) {
+export function CopyLinkButton({ url, label = "Copy link" }: { url: string; label?: string }) {
   const [copied, setCopied] = useState(false);
 
   return (
@@ -17,7 +17,7 @@ export function CopyLinkButton({ url }: { url: string }) {
         setTimeout(() => setCopied(false), 1500);
       }}
     >
-      {copied ? "Copied" : "Copy link"}
+      {copied ? "Copied" : label}
     </Button>
   );
 }

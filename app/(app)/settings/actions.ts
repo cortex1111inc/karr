@@ -40,3 +40,28 @@ export async function updateOrgSettings(_prevState: { error: string | null }, fo
   revalidatePath("/settings");
   return { error: null };
 }
+
+const billingSettingsSchema = z.object({
+  defaultGstRate: z.coerce.number().min(0, "Can't be negative").max(100, "Must be 100 or less"),
+});
+
+export async function updateBillingSettings(_prevState: { error: string | null }, formData: FormData) {
+  const user = await requireUser();
+
+  if (user.role !== "owner") {
+    return { error: "Only the workspace owner can change these settings." };
+  }
+
+  const parsed = billingSettingsSchema.safeParse({
+    defaultGstRate: formData.get("defaultGstRate"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the form and try again." };
+  }
+
+  await db.update(organizations).set(parsed.data).where(eq(organizations.id, user.orgId));
+
+  revalidatePath("/settings");
+  return { error: null };
+}

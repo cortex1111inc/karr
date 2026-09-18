@@ -8,6 +8,8 @@ const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/leads", label: "Leads" },
   { href: "/customers", label: "Customers" },
+  { href: "/quotations", label: "Quotations" },
+  { href: "/invoices", label: "Invoices" },
   { href: "/campaigns", label: "Campaigns" },
   { href: "/notifications", label: "Notifications" },
   { href: "/integrations", label: "Integrations" },

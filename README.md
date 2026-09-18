@@ -57,6 +57,18 @@ Staff get in-app nudges (sidebar unread badge, `/notifications` page) for two th
 
 `NEXT_PUBLIC_APP_URL` controls the domain used in links sent inside WhatsApp messages (booking status links). On Vercel it falls back to `VERCEL_URL` automatically if unset.
 
+## Billing
+
+Quotations (`/quotations`) and invoices (`/invoices`) are separate tables, not one "documents" table with a type flag — their lifecycles differ (a quotation is draft/sent/accepted/declined; an invoice additionally tracks payment) and converting a quotation copies it into a new invoice row rather than mutating it in place, so the original quote stays intact.
+
+- **Money** is `numeric(12,2)` in Postgres, never a float. Totals are computed once, server-side, in `lib/billing/money.ts#calculateTotals()` and persisted on the row — never recalculated live from line items on every read.
+- **Document numbers** (`QUO-0001`, `INV-0001`) come from a per-org counter (`organizations.quotationCounter` / `invoiceCounter`), incremented in one atomic `UPDATE ... RETURNING` (`lib/billing/numbering.ts`) — safe if two staff create documents at the same moment.
+- **Payment status** (`draft`/`sent` → `partial` → `paid`) is computed from `amountPaid` vs `total` every time a payment is recorded or removed (`app/(app)/invoices/actions.ts`) — never set by hand. `void` is the one manual status, for a cancelled invoice.
+- **Public share links** (`/quote/[token]`, `/invoice/[token]`) follow the same unlisted-token pattern as the booking status page — no login, not indexed, just unguessable enough that only someone with the link (the customer it was sent to) can view it.
+- The line-item editor (`components/billing/line-items-editor.tsx`) is shared between quotations and invoices: add/remove rows, live subtotal/GST/total, serializes to one hidden JSON field the server parses with `lib/billing/schema.ts`.
+
+**Not built:** inventory/stock tracking. What "stock" means differs completely between a rental business (the vehicles themselves) and a service center (parts/consumables) — building either without knowing which this is would mean guessing at a data model. See `ROADMAP.md` Phase 4 for the reasoning.
+
 ## Scripts
 
 | Command | What it does |
@@ -77,15 +89,19 @@ app/
   login/              Public sign-in route (see proxy.ts for the auth gate)
   book/[slug]/         Public slot-booking page, one per org (organizations.slug) — no auth
   status/[token]/       Public booking-status page, one per lead (leads.publicToken) — no auth
+  quote/[token]/         Public quotation view, one per quotation (quotations.publicToken) — no auth
+  invoice/[token]/       Public invoice view, one per invoice (invoices.publicToken) — no auth
   api/cron/daily/       The one scheduled job (Route Handler), auth'd via CRON_SECRET bearer token
   (app)/              Authenticated app shell — layout.tsx calls requireUser()
     dashboard/
     leads/            Lead pipeline: page.tsx (server) + pipeline-board.tsx (client) + actions.ts
     customers/
+    quotations/         Quotations list/create/detail — see "Billing" below
+    invoices/            Invoices list/create/detail + payment recording
     campaigns/         Retention broadcast tool
     notifications/      In-app task reminders — mark read/mark all, fed by the daily cron
     integrations/        Connect third-party services through the UI (WhatsApp today) — no code/redeploy
-    settings/           Org settings (booking link, reminder config, stale-lead threshold) + settings/team (staff)
+    settings/           Org settings (booking link, reminder config, stale-lead threshold, billing defaults) + settings/team (staff)
 db/
   schema.ts           Drizzle schema — source of truth for the data model
   index.ts            Drizzle client (server-only)
@@ -95,12 +111,14 @@ lib/
   auth.ts             requireUser() — resolves the session to an org-scoped profile
   supabase/           Supabase clients: client.ts (browser), server.ts (RSC/actions), proxy.ts (proxy.ts helper), admin.ts (service-role, staff invites)
   whatsapp/            Provider abstraction (cloud-provider.ts, console-provider.ts) + sendWhatsApp() + templates.ts — checks integrations table first, then env vars
+  billing/              money.ts (totals math), numbering.ts (atomic QUO-/INV- numbers), schema.ts (line-item validation)
   notifications.ts      notify() — creates an in-app notification, deduped by source+kind+profile
   crypto.ts             encryptSecret()/decryptSecret() — AES-256-GCM, used to store integration credentials at rest
   slug.ts / tokens.ts / site.ts   Small helpers: org slugs, public tokens, site URL resolution
   utils.ts            cn() class-merging helper
 components/
-  ui/                 Primitive components (Button, Card, Input, Badge, Select…)
+  ui/                 Primitive components (Button, Card, Input, Badge, Select, CopyLinkButton…)
+  billing/              LineItemsEditor — shared add/remove-rows editor used by both quotations and invoices
   layout/             Shared layout pieces (PageHeader)
 proxy.ts              Auth gate — redirects signed-out visitors, refreshes the session cookie
 vercel.json            Cron schedule for the retention-reminder job

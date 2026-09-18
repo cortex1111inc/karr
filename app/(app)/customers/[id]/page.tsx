@@ -2,13 +2,23 @@ import { and, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { customers, leads, whatsappMessages } from "@/db/schema";
+import { customers, invoices, leads, whatsappMessages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { formatCurrency } from "@/lib/billing/money";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { EditCustomerForm } from "./edit-customer-form";
 import { DeleteCustomerButton } from "./delete-customer-button";
+
+const INVOICE_STATUS_TONE: Record<string, "neutral" | "accent" | "danger"> = {
+  draft: "neutral",
+  sent: "neutral",
+  partial: "accent",
+  paid: "accent",
+  void: "danger",
+};
 
 const MESSAGE_KIND_LABEL: Record<string, string> = {
   vehicle_received: "Vehicle received",
@@ -38,7 +48,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   if (!customer) notFound();
 
-  const [history, messages] = await Promise.all([
+  const [history, messages, customerInvoices] = await Promise.all([
     db
       .select()
       .from(leads)
@@ -50,6 +60,11 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       .where(and(eq(whatsappMessages.customerId, id), eq(whatsappMessages.orgId, user.orgId)))
       .orderBy(desc(whatsappMessages.createdAt))
       .limit(10),
+    db
+      .select()
+      .from(invoices)
+      .where(and(eq(invoices.customerId, id), eq(invoices.orgId, user.orgId)))
+      .orderBy(desc(invoices.createdAt)),
   ]);
 
   return (
@@ -113,6 +128,36 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                       </div>
                       <span className="mt-1 block font-mono text-[0.68rem] text-faint">
                         {lead.createdAt.toLocaleDateString()}
+                      </span>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-sm font-bold">Billing</h2>
+                <ButtonLink href={`/invoices/new?customerId=${customer.id}`} variant="ghost" size="sm">
+                  New invoice
+                </ButtonLink>
+              </div>
+              <div className="mt-4 flex flex-col gap-3">
+                {customerInvoices.length === 0 ? (
+                  <p className="text-sm text-faint">No invoices yet.</p>
+                ) : (
+                  customerInvoices.map((invoice) => (
+                    <Link
+                      key={invoice.id}
+                      href={`/invoices/${invoice.id}`}
+                      className="block rounded-lg border border-border p-3 text-sm transition-colors hover:border-border-strong"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs text-faint">{invoice.number}</span>
+                        <Badge tone={INVOICE_STATUS_TONE[invoice.status]}>{invoice.status}</Badge>
+                      </div>
+                      <span className="mt-1 block font-mono text-sm font-medium tabular-nums">
+                        {formatCurrency(invoice.total)}
                       </span>
                     </Link>
                   ))
