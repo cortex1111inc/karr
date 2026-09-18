@@ -106,11 +106,18 @@ The pattern (typed provider interface + DB-backed per-org credentials + encrypte
 
 ## Phase 5 — Business Intelligence
 
-- [ ] Sales dashboard (leads in, conversion rate, revenue — replacing today's placeholder counts)
-- [ ] Lead source analytics (which channel converts best)
-- [ ] Staff performance (leads handled, conversion rate per staff member)
-- [ ] Revenue visibility (by period, by service/rental type)
-- [ ] Exportable reports (CSV at minimum)
+- [x] Sales dashboard — `/reports`: leads in, conversion rate, revenue collected, avg. deal size, for a selectable date range (7/30/90/365 days)
+- [x] Lead source analytics — leads and conversion rate broken down by source, same page
+- [x] Staff performance — leads assigned and conversion rate per staff member (falls back to "Unassigned")
+- [x] Revenue visibility — by week (bar list, current range) and by type (rental vs. service/other)
+- [x] Exportable reports — CSV export for leads, customers, and invoices (`/api/export/*`), full data every time regardless of the report page's date filter; also linked directly from each list page's header
+
+**Design notes:**
+- The existing `/dashboard` stayed as-is — it's a "what needs attention today" operational view (follow-ups due, low stock), a different job from `/reports`, which is retrospective sales analysis. Didn't merge them; the roadmap's "replacing today's placeholder counts" read as *add the real thing*, not *delete the operational view*.
+- "Conversion" is approximated as *currently* `stage = 'booked'` for leads created in the selected range — not a true point-in-time funnel (a lead created 40 days ago that converted yesterday wouldn't show as converted in a 30-day report, since its *creation* falls outside the range while its conversion event doesn't get tracked separately). Good enough for a trend signal at this scale; would need a `stage_changed_at` history table to do this precisely — not built, not asked for.
+- "Rental vs. service/other" revenue split is a proxy: a payment counts as rental if its invoice traces back (via `invoices.leadId`) to a lead with `vehicleId` set, using the same signal the Vehicles feature relies on elsewhere. No separate "job type" field was added.
+- Aggregation happens in JS after fetching the date-range rows, not via SQL `GROUP BY`/`date_trunc` — at this data scale (one business, hundreds not millions of rows) it's simpler to read and just as fast; revisit with real SQL aggregation only if row counts ever justify it.
+- CSV export deliberately ignores the report page's date filter — it's meant as a full-data escape hatch (backup, spreadsheet analysis, accountant handoff), not a filtered report artifact.
 
 ---
 

@@ -75,6 +75,18 @@ Two separate features, not one — "stock" means different things for a rental b
 - **Stock items** (`/inventory`) — parts/consumables tracked by `quantityOnHand` vs. `lowStockThreshold`. Every change (restock/usage/adjustment) writes a `stock_movements` row rather than only updating the count, so there's an audit trail (`app/(app)/inventory/actions.ts#recordStockMovement`). Not linked to invoice line items yet — invoice line items are still freeform text.
 - **Low-stock alerts** — the daily cron flags anything at or below threshold with an in-app notification to the owner (`low_stock` kind), deduped weekly rather than daily.
 
+## Reports
+
+`/reports` is retrospective sales analysis — separate from `/dashboard`, which stays an operational "what needs attention today" view. Covers a selectable date range (7/30/90/365 days):
+
+- **KPIs** — leads in, conversion rate, revenue collected, average deal size.
+- **Lead source breakdown** — count and conversion rate per `leads.source`.
+- **Staff performance** — count and conversion rate per assignee (or "Unassigned").
+- **Revenue by week** and **by type** (rental vs. service/other — proxied via whether the invoice's lead has a `vehicleId`, the same signal Vehicles uses elsewhere; no separate "job type" field exists).
+- **CSV export** (`/api/export/leads`, `/api/export/customers`, `/api/export/invoices`) — full data, not date-filtered; also linked from each list page's own header for convenience.
+
+All aggregation happens in JS after fetching the date-range rows (no SQL `GROUP BY`/`date_trunc`) — simpler to read at this data scale, revisit only if row counts ever justify the complexity. "Conversion" means *currently* `stage = 'booked'`, not a true point-in-time funnel — accurate enough for a trend signal, not a precise historical audit (would need a stage-change-history table for that).
+
 ## Scripts
 
 | Command | What it does |
@@ -98,6 +110,7 @@ app/
   quote/[token]/         Public quotation view, one per quotation (quotations.publicToken) — no auth
   invoice/[token]/       Public invoice view, one per invoice (invoices.publicToken) — no auth
   api/cron/daily/       The one scheduled job (Route Handler), auth'd via CRON_SECRET bearer token
+  api/export/           CSV export Route Handlers (leads, customers, invoices) — see "Reports" below
   (app)/              Authenticated app shell — layout.tsx calls requireUser()
     dashboard/
     leads/            Lead pipeline: page.tsx (server) + pipeline-board.tsx (client) + actions.ts
@@ -106,6 +119,7 @@ app/
     inventory/            Parts/consumables, tracked by quantity — see "Inventory" below
     quotations/         Quotations list/create/detail — see "Billing" below
     invoices/            Invoices list/create/detail + payment recording
+    reports/             Sales analytics — see "Reports" below
     campaigns/         Retention broadcast tool
     notifications/      In-app task reminders — mark read/mark all, fed by the daily cron
     integrations/        Connect third-party services through the UI (WhatsApp today) — no code/redeploy
@@ -122,6 +136,7 @@ lib/
   billing/              money.ts (totals math), numbering.ts (atomic QUO-/INV- numbers), schema.ts (line-item validation)
   notifications.ts      notify() — creates an in-app notification, deduped by source+kind+profile
   crypto.ts             encryptSecret()/decryptSecret() — AES-256-GCM, used to store integration credentials at rest
+  csv.ts                 toCsv()/csvResponse() — used by app/api/export/*
   slug.ts / tokens.ts / site.ts   Small helpers: org slugs, public tokens, site URL resolution
   utils.ts            cn() class-merging helper
 components/

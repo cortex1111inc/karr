@@ -31,7 +31,16 @@ export default async function InvoicesPage() {
       <PageHeader
         title="Invoices"
         description="Bills, GST, and payment status in one place."
-        action={<ButtonLink href="/invoices/new" variant="accent" size="sm">New invoice</ButtonLink>}
+        action={
+          <div className="flex items-center gap-3">
+            <a href="/api/export/invoices" className="text-sm font-medium text-accent-deep hover:underline">
+              Export CSV
+            </a>
+            <ButtonLink href="/invoices/new" variant="accent" size="sm">
+              New invoice
+            </ButtonLink>
+          </div>
+        }
       />
       <div className="flex-1 px-8 py-6">
         {rows.length === 0 ? (

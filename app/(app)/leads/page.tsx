@@ -58,7 +58,14 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
       <PageHeader
         title="Leads"
         description="Every enquiry, in one pipeline."
-        action={<NewLeadDialog />}
+        action={
+          <div className="flex items-center gap-3">
+            <a href="/api/export/leads" className="text-sm font-medium text-accent-deep hover:underline">
+              Export CSV
+            </a>
+            <NewLeadDialog />
+          </div>
+        }
       />
       <div className="border-b border-border bg-surface px-8 py-4">
         <LeadFilters profiles={orgProfiles} initial={params} />

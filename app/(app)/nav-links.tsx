@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/inventory", label: "Inventory" },
   { href: "/quotations", label: "Quotations" },
   { href: "/invoices", label: "Invoices" },
+  { href: "/reports", label: "Reports" },
   { href: "/campaigns", label: "Campaigns" },
   { href: "/notifications", label: "Notifications" },
   { href: "/integrations", label: "Integrations" },

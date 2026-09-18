@@ -30,7 +30,15 @@ export default async function CustomersPage({
 
   return (
     <>
-      <PageHeader title="Customers" description="Everyone who's booked with you, in one record." />
+      <PageHeader
+        title="Customers"
+        description="Everyone who's booked with you, in one record."
+        action={
+          <a href="/api/export/customers" className="text-sm font-medium text-accent-deep hover:underline">
+            Export CSV
+          </a>
+        }
+      />
       <div className="border-b border-border bg-surface px-8 py-4">
         <form method="get" className="flex items-end gap-3">
           <div className="w-72">
