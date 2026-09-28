@@ -25,6 +25,14 @@ schema changes go through hand-written SQL instead of `db:push`:
 2. Write the equivalent `ALTER TABLE` / `CREATE TABLE` statements by hand.
    Use `IF NOT EXISTS` / `DO $$ ... EXCEPTION WHEN duplicate_object ...`
    guards so the script is safe to re-run.
+   **Every `CREATE TABLE` must be followed by
+   `ALTER TABLE <name> ENABLE ROW LEVEL SECURITY;`** — Supabase's default
+   privileges grant the public `anon` and `authenticated` roles full
+   read/write on every new table in `public`, and the anon key ships to
+   every browser. With RLS on and no policies, those roles see nothing via
+   Supabase's REST API, while the app (connecting as `postgres`, the table
+   owner, which bypasses RLS) is unaffected. All 17 existing tables were
+   found with RLS off and fixed on 2026-09-28; don't reintroduce the gap.
 3. Apply it directly:
    ```bash
    node -e "

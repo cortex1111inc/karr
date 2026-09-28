@@ -4,6 +4,8 @@ Living checklist for what's built vs. what's next. Check items off as they ship 
 
 Phases build on each other; within a phase, items are roughly in build order but not strict.
 
+**Remaining work (Phase 6, cross-cutting items, integrations, UI updates, production hardening) is planned in detail in [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md)** — start there for any new session.
+
 ---
 
 ## Phase 0 — Foundation
