@@ -2,7 +2,8 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { invoiceItems, invoices, payments } from "@/db/schema";
+import { customers, invoiceItems, invoices, payments } from "@/db/schema";
+import { EmailDocumentDialog } from "../email-document-dialog";
 import { requireUser } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/site";
 import { formatCurrency } from "@/lib/billing/money";
@@ -34,9 +35,12 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   if (!invoice) notFound();
 
-  const [items, paymentRows] = await Promise.all([
+  const [items, paymentRows, customerRow] = await Promise.all([
     db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, id)).orderBy(asc(invoiceItems.sortOrder)),
     db.select().from(payments).where(eq(payments.invoiceId, id)).orderBy(desc(payments.paidAt)),
+    invoice.customerId
+      ? db.select({ email: customers.email }).from(customers).where(eq(customers.id, invoice.customerId)).limit(1)
+      : Promise.resolve([]),
   ]);
 
   const balanceDue = Math.max(0, Number(invoice.total) - Number(invoice.amountPaid));
@@ -158,6 +162,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <code className="break-all rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-xs">{publicUrl}</code>
                 <CopyLinkButton url={publicUrl} />
+                <EmailDocumentDialog kind="invoice" id={invoice.id} defaultTo={customerRow[0]?.email ?? null} />
               </div>
             </Card>
 

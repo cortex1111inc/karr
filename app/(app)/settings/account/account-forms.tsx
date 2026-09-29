@@ -87,7 +87,7 @@ const PREF_KINDS: { kind: string; label: string; hint: string }[] = [
   { kind: "service_due", label: "Service due", hint: "A customer is due for a service." },
 ];
 
-export function NotificationPrefsForm({ muted }: { muted: string[] }) {
+export function NotificationPrefsForm({ muted, channels, hasPhone }: { muted: string[]; channels: string[]; hasPhone: boolean }) {
   const [state, formAction, pending] = useActionState(updateNotificationPrefs, initial);
   useActionToast(state, pending, "Preferences saved");
   return (
@@ -103,6 +103,24 @@ export function NotificationPrefsForm({ muted }: { muted: string[] }) {
             </span>
           </label>
         ))}
+      </fieldset>
+      <fieldset className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
+        <legend className="text-sm font-medium">Also send them to</legend>
+        <label className="flex items-center gap-3 text-sm">
+          <input type="checkbox" name="channel" value="email" defaultChecked={channels.includes("email")} className="size-4 accent-accent" />
+          My email
+        </label>
+        <label className="flex items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            name="channel"
+            value="whatsapp"
+            defaultChecked={channels.includes("whatsapp")}
+            disabled={!hasPhone}
+            className="size-4 accent-accent"
+          />
+          My WhatsApp {hasPhone ? null : <span className="text-xs text-faint">(add your phone above first)</span>}
+        </label>
       </fieldset>
       <div>
         <Button type="submit" variant="accent" size="sm" disabled={pending}>

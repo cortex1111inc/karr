@@ -2,7 +2,8 @@ import { and, asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { quotationItems, quotations } from "@/db/schema";
+import { customers, quotationItems, quotations } from "@/db/schema";
+import { EmailDocumentDialog } from "../../invoices/email-document-dialog";
 import { requireUser } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/site";
 import { formatCurrency } from "@/lib/billing/money";
@@ -23,11 +24,12 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
 
   if (!quotation) notFound();
 
-  const items = await db
-    .select()
-    .from(quotationItems)
-    .where(eq(quotationItems.quotationId, id))
-    .orderBy(asc(quotationItems.sortOrder));
+  const [items, customerRow] = await Promise.all([
+    db.select().from(quotationItems).where(eq(quotationItems.quotationId, id)).orderBy(asc(quotationItems.sortOrder)),
+    quotation.customerId
+      ? db.select({ email: customers.email }).from(customers).where(eq(customers.id, quotation.customerId)).limit(1)
+      : Promise.resolve([]),
+  ]);
 
   const publicUrl = `${getSiteUrl()}/quote/${quotation.publicToken}`;
 
@@ -109,6 +111,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <code className="break-all rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-xs">{publicUrl}</code>
                 <CopyLinkButton url={publicUrl} />
+                <EmailDocumentDialog kind="quotation" id={quotation.id} defaultTo={customerRow[0]?.email ?? null} />
               </div>
             </Card>
 

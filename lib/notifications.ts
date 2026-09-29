@@ -2,6 +2,9 @@ import "server-only";
 import { and, eq, gte } from "drizzle-orm";
 import { db } from "@/db";
 import { notifications, notificationKindEnum, profiles } from "@/db/schema";
+import { sendEmail } from "@/lib/email";
+import { getSiteUrl } from "@/lib/site";
+import { sendWhatsApp } from "@/lib/whatsapp";
 
 export type NotifyInput = {
   orgId: string;
@@ -22,7 +25,12 @@ export type NotifyInput = {
 export async function notify(input: NotifyInput) {
   // Respect the recipient's muted kinds (set on /settings/account).
   const [recipient] = await db
-    .select({ muted: profiles.mutedNotificationKinds })
+    .select({
+      muted: profiles.mutedNotificationKinds,
+      channels: profiles.alertChannels,
+      email: profiles.email,
+      phone: profiles.phone,
+    })
     .from(profiles)
     .where(eq(profiles.id, input.profileId))
     .limit(1);
@@ -59,4 +67,26 @@ export async function notify(input: NotifyInput) {
     sourceType: input.sourceType,
     sourceId: input.sourceId,
   });
+
+  // Fan out to the extra channels the recipient opted into on /settings/account.
+  const link = input.link ? `${getSiteUrl()}${input.link}` : null;
+  const details = [input.body, link].filter(Boolean).join(" ");
+  if (recipient.channels.includes("email")) {
+    await sendEmail({
+      orgId: input.orgId,
+      kind: `alert:${input.kind}`,
+      to: recipient.email,
+      subject: input.title,
+      text: [input.body, link].filter(Boolean).join("\n\n"),
+    });
+  }
+  if (recipient.channels.includes("whatsapp") && recipient.phone) {
+    await sendWhatsApp({
+      orgId: input.orgId,
+      to: recipient.phone,
+      kind: "staff_alert",
+      body: `${input.title}\n${details}`,
+      templateParams: [input.title, details],
+    });
+  }
 }

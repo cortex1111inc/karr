@@ -248,6 +248,7 @@ export async function convertLeadToCustomer(
     customerId: customer.id,
     leadId,
     body: `Hi ${lead.contactName}, we've got your booking for "${lead.interest}". Track it here: ${statusUrl}`,
+    templateParams: [lead.contactName, statusUrl],
   });
   await db.insert(leadActivities).values({
     leadId,
@@ -280,6 +281,7 @@ export async function notifyReadyForPickup(leadId: string) {
     customerId: lead.customerId ?? undefined,
     leadId,
     body: `Hi ${lead.contactName}, your vehicle is ready for pickup! View your booking and bill: ${statusUrl}`,
+    templateParams: [lead.contactName, statusUrl],
   });
 
   await db.insert(leadActivities).values({

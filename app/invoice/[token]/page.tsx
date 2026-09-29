@@ -5,19 +5,31 @@ import { invoiceItems, invoices, organizations } from "@/db/schema";
 import { formatCurrency } from "@/lib/billing/money";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { getIntegration } from "@/lib/integrations";
+import { PayButton } from "./pay-button";
 
-export default async function PublicInvoicePage({ params }: { params: Promise<{ token: string }> }) {
+export default async function PublicInvoicePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ paid?: string }>;
+}) {
   const { token } = await params;
+  const { paid } = await searchParams;
 
   const [invoice] = await db.select().from(invoices).where(eq(invoices.publicToken, token)).limit(1);
   if (!invoice) notFound();
 
-  const [org, items] = await Promise.all([
+  const [org, items, razorpay] = await Promise.all([
     db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, invoice.orgId)).limit(1),
     db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, invoice.id)).orderBy(asc(invoiceItems.sortOrder)),
+    getIntegration(invoice.orgId, "razorpay"),
   ]);
 
   const balanceDue = Math.max(0, Number(invoice.total) - Number(invoice.amountPaid));
+  const canPayOnline =
+    Boolean(razorpay?.connectedAt) && balanceDue > 0 && (invoice.status === "sent" || invoice.status === "partial");
 
   return (
     <main className="flex min-h-full flex-1 justify-center bg-surface-2 px-6 py-16">
@@ -86,6 +98,14 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
 
           {invoice.notes ? (
             <p className="mt-4 border-t border-border pt-3 text-sm text-muted">{invoice.notes}</p>
+          ) : null}
+
+          {paid ? (
+            <p role="status" className="mt-5 rounded-lg bg-accent-soft px-3 py-2 text-center text-sm text-accent-deep">
+              Thanks — your payment is being confirmed. This page updates once it&apos;s received.
+            </p>
+          ) : canPayOnline ? (
+            <PayButton token={token} balance={balanceDue} />
           ) : null}
         </Card>
       </div>

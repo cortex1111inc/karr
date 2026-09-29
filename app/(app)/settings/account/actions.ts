@@ -60,7 +60,14 @@ export async function updateNotificationPrefs(_prev: State, formData: FormData):
   const user = await requireUser();
   const enabled = new Set(formData.getAll("kind").map(String));
   const muted = notificationKindEnum.enumValues.filter((k) => k !== "system" && !enabled.has(k));
-  await db.update(profiles).set({ mutedNotificationKinds: muted }).where(eq(profiles.id, user.id));
+  const channels = formData
+    .getAll("channel")
+    .map(String)
+    .filter((c) => c === "email" || c === "whatsapp");
+  await db
+    .update(profiles)
+    .set({ mutedNotificationKinds: muted, alertChannels: channels })
+    .where(eq(profiles.id, user.id));
   revalidatePath("/settings/account");
   return { error: null };
 }

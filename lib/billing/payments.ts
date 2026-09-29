@@ -40,11 +40,15 @@ export type ApplyPaymentInput = {
   recordedBy?: string | null;
   paidAt?: Date;
   providerPaymentId?: string | null;
+  online?: boolean;
 };
 
 // Shared by the manual "Record payment" form and the payment-gateway
-// webhook, so both follow exactly the same rules.
-export async function applyPayment(input: ApplyPaymentInput): Promise<{ ok: true } | { ok: false; error: string }> {
+// webhook, so both follow exactly the same rules. A repeated
+// providerPaymentId (redelivered webhook) is a no-op returning duplicate: true.
+export async function applyPayment(
+  input: ApplyPaymentInput,
+): Promise<{ ok: true; duplicate?: boolean } | { ok: false; error: string }> {
   const [invoice] = await db
     .select({ status: invoices.status })
     .from(invoices)
@@ -57,16 +61,22 @@ export async function applyPayment(input: ApplyPaymentInput): Promise<{ ok: true
   }
   if (!(input.amount > 0)) return { ok: false, error: "Enter an amount greater than zero" };
 
-  await db.insert(payments).values({
-    orgId: input.orgId,
-    invoiceId: input.invoiceId,
-    amount: input.amount.toString(),
-    method: input.method,
-    notes: input.notes ?? null,
-    recordedBy: input.recordedBy ?? null,
-    paidAt: input.paidAt ?? new Date(),
-    providerPaymentId: input.providerPaymentId ?? null,
-  });
+  const inserted = await db
+    .insert(payments)
+    .values({
+      orgId: input.orgId,
+      invoiceId: input.invoiceId,
+      amount: input.amount.toString(),
+      method: input.method,
+      notes: input.notes ?? null,
+      recordedBy: input.recordedBy ?? null,
+      paidAt: input.paidAt ?? new Date(),
+      providerPaymentId: input.providerPaymentId ?? null,
+      online: input.online ?? false,
+    })
+    .onConflictDoNothing()
+    .returning({ id: payments.id });
+  if (inserted.length === 0) return { ok: true, duplicate: true };
 
   await syncInvoicePaymentStatus(input.invoiceId);
   return { ok: true };

@@ -67,6 +67,8 @@ export const profiles = pgTable(
     phone: text("phone"),
     // Notification kinds this person has turned off (in-app).
     mutedNotificationKinds: text("muted_notification_kinds").array().notNull().default([]),
+    // Extra channels for notifications besides in-app: "email", "whatsapp".
+    alertChannels: text("alert_channels").array().notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("profiles_org_idx").on(table.orgId)],
@@ -168,12 +170,15 @@ export const whatsappMessageKindEnum = pgEnum("whatsapp_message_kind", [
   "campaign",
   "manual",
   "invoice_reminder",
+  "staff_alert",
 ]);
 
 export const whatsappMessageStatusEnum = pgEnum("whatsapp_message_status", [
   "sent",
   "failed",
   "skipped",
+  "delivered",
+  "read",
 ]);
 
 // Audit log of every outbound WhatsApp message — sent for real once
@@ -199,6 +204,7 @@ export const whatsappMessages = pgTable(
   (table) => [
     index("whatsapp_messages_org_idx").on(table.orgId),
     index("whatsapp_messages_customer_idx").on(table.customerId),
+    index("whatsapp_messages_provider_id_idx").on(table.providerMessageId),
   ],
 );
 
@@ -295,7 +301,7 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   profile: one(profiles, { fields: [notifications.profileId], references: [profiles.id] }),
 }));
 
-export const integrationProviderEnum = pgEnum("integration_provider", ["whatsapp"]);
+export const integrationProviderEnum = pgEnum("integration_provider", ["whatsapp", "email", "razorpay"]);
 
 // Per-org third-party integration credentials, entered through the
 // Integrations page (app/(app)/integrations) instead of environment
@@ -312,11 +318,18 @@ export const integrations = pgTable(
     provider: integrationProviderEnum("provider").notNull(),
     phoneNumberId: text("phone_number_id"),
     accessTokenEncrypted: text("access_token_encrypted"),
+    // Second secret where a provider has one (Razorpay webhook secret).
+    secondarySecretEncrypted: text("secondary_secret_encrypted"),
+    // Non-secret, provider-specific config — see lib/integrations.ts.
+    settings: jsonb("settings").$type<Record<string, unknown>>().notNull().default({}),
     connectedAt: timestamp("connected_at", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("integrations_org_provider_idx").on(table.orgId, table.provider)],
+  (table) => [
+    uniqueIndex("integrations_org_provider_idx").on(table.orgId, table.provider),
+    index("integrations_phone_number_id_idx").on(table.phoneNumberId),
+  ],
 );
 
 export const integrationsRelations = relations(integrations, ({ one }) => ({
@@ -403,6 +416,11 @@ export const invoices = pgTable(
     // Last WhatsApp payment reminder sent to the customer (cron), so they
     // get at most one per org.invoiceReminderDays.
     lastReminderSentAt: timestamp("last_reminder_sent_at", { withTimezone: true }),
+    // Razorpay payment link for the balance due; reused while the balance
+    // still equals paymentLinkAmount.
+    paymentLinkId: text("payment_link_id"),
+    paymentLinkUrl: text("payment_link_url"),
+    paymentLinkAmount: numeric("payment_link_amount", { precision: 12, scale: 2 }),
     publicToken: text("public_token").notNull(),
     createdBy: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -445,6 +463,7 @@ export const payments = pgTable(
     // Set for payments received through a gateway webhook; unique so a
     // redelivered webhook can't record the same payment twice.
     providerPaymentId: text("provider_payment_id"),
+    online: boolean("online").notNull().default(false),
     paidAt: timestamp("paid_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -660,4 +679,21 @@ export const leadStageChanges = pgTable(
     index("lead_stage_changes_lead_idx").on(table.leadId, table.changedAt),
     index("lead_stage_changes_org_idx").on(table.orgId, table.changedAt),
   ],
+);
+
+// Audit log of every outbound email, mirroring whatsapp_messages.
+export const emailMessages = pgTable(
+  "email_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    toEmail: text("to_email").notNull(),
+    subject: text("subject").notNull(),
+    status: text("status", { enum: ["sent", "failed"] }).notNull(),
+    providerMessageId: text("provider_message_id"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("email_messages_org_idx").on(table.orgId)],
 );

@@ -10,7 +10,7 @@ import { NameForm, NotificationPrefsForm, PasswordChangeForm, SignOutEverywhereB
 export default async function AccountPage() {
   const user = await requireUser();
   const [profile] = await db
-    .select({ phone: profiles.phone, muted: profiles.mutedNotificationKinds })
+    .select({ phone: profiles.phone, muted: profiles.mutedNotificationKinds, channels: profiles.alertChannels })
     .from(profiles)
     .where(eq(profiles.id, user.id))
     .limit(1);
@@ -39,7 +39,7 @@ export default async function AccountPage() {
           <h2 className="font-display text-sm font-bold">Notifications</h2>
           <p className="mt-0.5 text-sm text-muted">Choose which in-app reminders you get.</p>
           <div className="mt-4">
-            <NotificationPrefsForm muted={profile?.muted ?? []} />
+            <NotificationPrefsForm muted={profile?.muted ?? []} channels={profile?.channels ?? []} hasPhone={Boolean(profile?.phone)} />
           </div>
         </Card>
         <Card className="p-5">

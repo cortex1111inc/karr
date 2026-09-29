@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
       kind: "service_reminder",
       customerId: customer.customerId,
       body: renderReminderMessage(customer.reminderMessage, customer.fullName),
+      templateParams: [customer.fullName],
     });
 
     await db
@@ -291,12 +292,14 @@ export async function GET(request: NextRequest) {
       (!inv.lastReminderSentAt || inv.lastReminderSentAt <= intervalAgo)
     ) {
       invoiceWhatsAppBudget -= 1;
+      const link = `${getSiteUrl()}/invoice/${inv.publicToken}`;
       await sendWhatsApp({
         orgId: inv.orgId,
         to: inv.contactPhone,
         kind: "invoice_reminder",
         customerId: inv.customerId ?? undefined,
-        body: `Hi ${inv.contactName}, a friendly reminder from ${inv.orgName}: ${formatCurrency(due)} is pending on invoice ${inv.number}. View it here: ${getSiteUrl()}/invoice/${inv.publicToken}`,
+        body: `Hi ${inv.contactName}, a friendly reminder from ${inv.orgName}: ${formatCurrency(due)} is pending on invoice ${inv.number}. View and pay: ${link}`,
+        templateParams: [inv.contactName, inv.orgName, formatCurrency(due), inv.number, link],
       });
       await db.update(invoices).set({ lastReminderSentAt: now }).where(eq(invoices.id, inv.id));
       results.invoiceWhatsApps += 1;

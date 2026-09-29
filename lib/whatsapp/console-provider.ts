@@ -10,4 +10,9 @@ export class ConsoleProvider implements WhatsAppProvider {
     console.log(`[whatsapp:console] → ${to}\n${body}`);
     return { ok: true, providerMessageId: `console-${Date.now()}` };
   }
+
+  async sendTemplate(to: string, name: string, language: string, params: string[]): Promise<WhatsAppSendResult> {
+    console.log(`[whatsapp:console] → ${to} template ${name} (${language}) ${JSON.stringify(params)}`);
+    return { ok: true, providerMessageId: `console-${Date.now()}` };
+  }
 }

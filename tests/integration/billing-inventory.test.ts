@@ -114,6 +114,17 @@ describe.skipIf(!TEST_DB)("billing & inventory (real DB)", () => {
     expect(inv.status).toBe("partial");
   });
 
+  it("records a redelivered gateway payment only once", async () => {
+    const invoiceId = await makeInvoice(1000);
+    const providerPaymentId = `pay_${Math.random().toString(36).slice(2)}`;
+    const input = { orgId, invoiceId, amount: 1000, method: "upi" as const, providerPaymentId, online: true };
+    const results = await Promise.all([m.payments.applyPayment(input), m.payments.applyPayment(input)]);
+    expect(results.filter((r) => r.ok && r.duplicate)).toHaveLength(1);
+    const [inv] = await m.db.select().from(m.schema.invoices).where(m.orm.eq(m.schema.invoices.id, invoiceId));
+    expect(Number(inv.amountPaid)).toBe(1000);
+    expect(inv.status).toBe("paid");
+  });
+
   it("rejects payments on void invoices and on another org's invoice", async () => {
     const invoiceId = await makeInvoice(500);
     await m.db.update(m.schema.invoices).set({ status: "void" }).where(m.orm.eq(m.schema.invoices.id, invoiceId));

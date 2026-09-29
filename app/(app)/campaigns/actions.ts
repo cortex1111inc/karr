@@ -74,6 +74,7 @@ export async function sendCampaign(_prevState: { error: string | null }, formDat
           customerId: customer.id,
           campaignId: campaign.id,
           body: parsed.data.message.replaceAll("{{name}}", customer.fullName),
+          templateParams: [customer.fullName],
         }),
       ),
     );

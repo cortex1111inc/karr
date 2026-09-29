@@ -275,31 +275,31 @@ Keep the established pattern (`README.md` → Integrations): typed provider inte
 
 ### 8.1 WhatsApp — required before real messages can go out
 
-- [ ] **Message templates.** Meta only allows free-form text inside the 24-hour customer-service window. Service reminders, campaigns and unpaid-invoice nudges are business-initiated, so **they will be rejected in production** as currently written (`lib/whatsapp/cloud-provider.ts` sends `type: "text"`; the file's own comment flags this). Add `sendTemplate(to, templateName, languageCode, params)` to the provider interface; store per-org template names per message kind (new `integration_settings` jsonb on `integrations`, or a `whatsapp_templates` table); fall back to text only for `ready_for_pickup`/replies. The user must create and get templates approved in Meta Business Suite — give them the exact template bodies/variables to submit.
-- [ ] **"Send test message"** button on `/integrations` (to the owner's own number).
-- [ ] **Inbound webhook** `/api/webhooks/whatsapp` (verify token handshake + signature) → auto-create a lead from an unknown number, append a `whatsapp` activity for a known lead. This is the highest-leverage lead-capture feature for this market. Update delivery status on `whatsapp_messages`.
+- [x] **Message templates.** Meta only allows free-form text inside the 24-hour customer-service window. Service reminders, campaigns and unpaid-invoice nudges are business-initiated, so **they will be rejected in production** as currently written (`lib/whatsapp/cloud-provider.ts` sends `type: "text"`; the file's own comment flags this). Add `sendTemplate(to, templateName, languageCode, params)` to the provider interface; store per-org template names per message kind (new `integration_settings` jsonb on `integrations`, or a `whatsapp_templates` table); fall back to text only for `ready_for_pickup`/replies. The user must create and get templates approved in Meta Business Suite — give them the exact template bodies/variables to submit.
+- [x] **"Send test message"** button on `/integrations` (to the owner's own number).
+- [x] **Inbound webhook** `/api/webhooks/whatsapp` (verify token handshake + signature) → auto-create a lead from an unknown number, append a `whatsapp` activity for a known lead. This is the highest-leverage lead-capture feature for this market. Update delivery status on `whatsapp_messages`.
 
 ### 8.2 Email (D3 — default Resend)
 
-- [ ] `lib/email/{types,resend-provider,console-provider,index}.ts` mirroring `lib/whatsapp/`; `email_messages` audit table (+ RLS).
-- [ ] Uses: "Email quote/invoice" buttons on detail pages (link to public page; attach PDF after WS9.2), staff notification digests (WS7 preferences), unpaid-invoice reminders.
-- [ ] Integrations card: API key + from-address, test send. Domain verification happens in the provider's dashboard — tell the user.
+- [x] `lib/email/{types,resend-provider,console-provider,index}.ts` mirroring `lib/whatsapp/`; `email_messages` audit table (+ RLS).
+- [x] Uses: "Email quote/invoice" buttons on detail pages (link to public page; attach PDF after WS9.2), staff notification digests (WS7 preferences), unpaid-invoice reminders.
+- [x] Integrations card: API key + from-address, test send. Domain verification happens in the provider's dashboard — tell the user.
 
 ### 8.3 Staff alert delivery
 
-- [ ] `lib/notifications.ts#notify()` fans out to email/WhatsApp per the recipient's preferences (WS7). Staff need a phone number field on `profiles` for WhatsApp alerts.
+- [x] `lib/notifications.ts#notify()` fans out to email/WhatsApp per the recipient's preferences (WS7). Staff need a phone number field on `profiles` for WhatsApp alerts.
 
 ### 8.4 Online payments (D2 — default Razorpay)
 
-- [ ] Credentials on `/integrations` (key id, key secret, webhook secret — all encrypted).
-- [ ] **Refactor first:** move payment-recording logic out of `app/(app)/invoices/actions.ts#recordPayment` into `lib/billing/payments.ts#applyPayment(orgId, invoiceId, amount, method, meta)` so the webhook and the manual form share the exact same status-transition code.
-- [ ] "Pay now" on `/invoice/[token]` → create a payment link for the balance due (verify the current Razorpay Payment Links API in their docs), store `provider_payment_link_id` on `invoices`.
-- [ ] Webhook `/api/webhooks/razorpay`: verify the HMAC signature, **idempotency** (unique `provider_payment_id` on `payments`), then `applyPayment`. Add `/api/webhooks` to `PUBLIC_PATHS` — signature verification is the auth.
-- [ ] Add `upi`/`card` method mapping from the gateway payload; add `online` source flag to payments.
+- [x] Credentials on `/integrations` (key id, key secret, webhook secret — all encrypted).
+- [x] **Refactor first:** move payment-recording logic out of `app/(app)/invoices/actions.ts#recordPayment` into `lib/billing/payments.ts#applyPayment(orgId, invoiceId, amount, method, meta)` so the webhook and the manual form share the exact same status-transition code.
+- [x] "Pay now" on `/invoice/[token]` → create a payment link for the balance due (verify the current Razorpay Payment Links API in their docs), store `provider_payment_link_id` on `invoices`.
+- [x] Webhook `/api/webhooks/razorpay`: verify the HMAC signature, **idempotency** (unique `provider_payment_id` on `payments`), then `applyPayment`. Add `/api/webhooks` to `PUBLIC_PATHS` — signature verification is the auth.
+- [x] Add `upi`/`card` method mapping from the gateway payload; add `online` source flag to payments.
 
 ### 8.5 Integrations page redesign
 
-- [ ] Card grid: WhatsApp, Email, Payments (and future), each with status badge, connect/update/disconnect, test action, and a "what this powers" line. Owner-only edits (existing rule).
+- [x] Card grid: WhatsApp, Email, Payments (and future), each with status badge, connect/update/disconnect, test action, and a "what this powers" line. Owner-only edits (existing rule).
 
 ---
 

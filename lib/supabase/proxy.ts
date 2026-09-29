@@ -13,6 +13,8 @@ const PUBLIC_PATHS = [
   "/site",
   "/r",
   "/api/cron",
+  // Authenticated by provider signatures inside each route.
+  "/api/webhooks",
 ];
 
 // Signed-in people have no reason to see these; send them to the app.
