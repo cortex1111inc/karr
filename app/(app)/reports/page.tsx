@@ -139,7 +139,7 @@ export default async function ReportsPage({
           </form>
         }
       />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="p-5">

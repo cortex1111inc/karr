@@ -28,7 +28,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title="Inventory" description="Parts and consumables." action={<NewStockItemDialog />} />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         {rows.length === 0 ? (
           <EmptyState title="No stock items yet" description="Track parts and consumables — shampoo, oil, spares — and get a nudge when they run low." />
         ) : (

@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getSiteUrl } from "@/lib/site";
 
 const inviteSchema = z.object({
   email: z.string().trim().email("Enter a valid email"),
@@ -32,10 +33,18 @@ export async function inviteTeammate(_prevState: { error: string | null }, formD
   }
 
   const admin = createAdminClient();
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(parsed.data.email);
+  // The emailed link signs them in via /auth/callback, then lands on the
+  // "set your password" screen rather than the generic login page.
+  const { data, error } = await admin.auth.admin.inviteUserByEmail(parsed.data.email, {
+    redirectTo: `${getSiteUrl()}/auth/callback?next=${encodeURIComponent("/reset-password?welcome=1")}`,
+  });
 
   if (error) {
-    return { error: error.message };
+    return {
+      error: /already been registered/i.test(error.message)
+        ? "That email already has a Vanspire account, so it can't be invited to this workspace."
+        : error.message,
+    };
   }
 
   await db.insert(profiles).values({
@@ -55,7 +64,16 @@ export async function removeTeammate(profileId: string) {
 
   if (user.role !== "owner" || profileId === user.id) return;
 
-  await db.delete(profiles).where(and(eq(profiles.id, profileId), eq(profiles.orgId, user.orgId)));
+  const removed = await db
+    .delete(profiles)
+    .where(and(eq(profiles.id, profileId), eq(profiles.orgId, user.orgId)))
+    .returning({ id: profiles.id });
+  if (removed.length === 0) return;
+
+  // Each login belongs to exactly one workspace, so removing someone also
+  // deletes their login — otherwise they could still sign in (and would be
+  // offered a brand-new workspace by onboarding).
+  await createAdminClient().auth.admin.deleteUser(profileId);
 
   revalidatePath("/settings/team");
 }

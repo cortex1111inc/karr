@@ -44,7 +44,7 @@ export default async function NewQuotationPage({
   return (
     <>
       <PageHeader title="New quotation" description="Send a price estimate before a booking is confirmed." />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         <Card className="max-w-3xl p-6">
           <QuotationForm
             defaultContactName={defaultContactName}

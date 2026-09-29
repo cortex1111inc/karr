@@ -43,65 +43,78 @@ export function LineItemsEditor({
     <div className="flex flex-col gap-4">
       <input type="hidden" name="itemsJson" value={itemsJson} />
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[520px] text-sm">
-          <thead>
-            <tr className="border-b border-border bg-surface-2 text-left">
-              <th className="p-2.5 font-medium text-faint">Description</th>
-              <th className="w-24 p-2.5 font-medium text-faint">Qty</th>
-              <th className="w-32 p-2.5 font-medium text-faint">Unit price</th>
-              <th className="w-32 p-2.5 text-right font-medium text-faint">Amount</th>
-              <th className="w-10 p-2.5" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.key} className="border-b border-border last:border-0">
-                <td className="p-2">
-                  <Input
-                    value={row.description}
-                    onChange={(e) => updateRow(row.key, { description: e.target.value })}
-                    placeholder="Self-drive rental, 3 days"
-                    className="h-9"
-                  />
-                </td>
-                <td className="p-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={row.quantity}
-                    onChange={(e) => updateRow(row.key, { quantity: Number(e.target.value) || 0 })}
-                    className="h-9"
-                  />
-                </td>
-                <td className="p-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={row.unitPrice}
-                    onChange={(e) => updateRow(row.key, { unitPrice: Number(e.target.value) || 0 })}
-                    className="h-9"
-                  />
-                </td>
-                <td className="p-2 text-right font-mono text-xs tabular-nums">
-                  {formatCurrency(row.quantity * row.unitPrice)}
-                </td>
-                <td className="p-2 text-center">
-                  <button
-                    type="button"
-                    aria-label="Remove line item"
-                    onClick={() => setRows((prev) => (prev.length > 1 ? prev.filter((r) => r.key !== row.key) : prev))}
-                    className="text-faint transition-colors hover:text-danger"
-                  >
-                    ✕
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Grid rather than <table>: stacks into a card per line on phones
+          (a scrolling table inside a form is unusable there), columns from sm up. */}
+      <div role="table" aria-label="Line items" className="rounded-lg border border-border text-sm">
+        <div
+          role="row"
+          className="hidden border-b border-border bg-surface-2 sm:grid sm:grid-cols-[1fr_5.5rem_7.5rem_7rem_2.5rem] sm:gap-2 sm:px-2 sm:py-2.5"
+        >
+          <span role="columnheader" className="px-0.5 font-medium text-faint">Description</span>
+          <span role="columnheader" className="font-medium text-faint">Qty</span>
+          <span role="columnheader" className="font-medium text-faint">Unit price</span>
+          <span role="columnheader" className="text-right font-medium text-faint">Amount</span>
+          <span role="columnheader" className="sr-only">Remove</span>
+        </div>
+        {rows.map((row, index) => (
+          <div
+            key={row.key}
+            role="row"
+            className="grid grid-cols-2 gap-2 border-b border-border p-3 last:border-0 sm:grid-cols-[1fr_5.5rem_7.5rem_7rem_2.5rem] sm:items-center sm:p-2"
+          >
+            <label role="cell" className="col-span-2 sm:col-span-1">
+              <span className="mb-1 block text-xs text-faint sm:sr-only">Description</span>
+              <Input
+                value={row.description}
+                onChange={(e) => updateRow(row.key, { description: e.target.value })}
+                placeholder="Self-drive rental, 3 days"
+                aria-label={`Line ${index + 1} description`}
+                className="h-9"
+              />
+            </label>
+            <label role="cell">
+              <span className="mb-1 block text-xs text-faint sm:sr-only">Qty</span>
+              <Input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.01"
+                value={row.quantity}
+                onChange={(e) => updateRow(row.key, { quantity: Number(e.target.value) || 0 })}
+                aria-label={`Line ${index + 1} quantity`}
+                className="h-9"
+              />
+            </label>
+            <label role="cell">
+              <span className="mb-1 block text-xs text-faint sm:sr-only">Unit price</span>
+              <Input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.01"
+                value={row.unitPrice}
+                onChange={(e) => updateRow(row.key, { unitPrice: Number(e.target.value) || 0 })}
+                aria-label={`Line ${index + 1} unit price`}
+                className="h-9"
+              />
+            </label>
+            <div role="cell" className="flex items-center font-mono text-xs tabular-nums sm:justify-end">
+              <span className="mr-2 font-sans text-faint sm:hidden">Amount</span>
+              {formatCurrency(row.quantity * row.unitPrice)}
+            </div>
+            <div role="cell" className="flex items-center justify-end">
+              <button
+                type="button"
+                aria-label={`Remove line ${index + 1}`}
+                disabled={rows.length === 1}
+                onClick={() => setRows((prev) => (prev.length > 1 ? prev.filter((r) => r.key !== row.key) : prev))}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-faint transition-colors hover:bg-danger-soft hover:text-danger disabled:opacity-30 disabled:hover:bg-transparent"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
       <Button type="button" variant="ghost" size="sm" onClick={() => setRows((prev) => [...prev, newRow()])} className="self-start">

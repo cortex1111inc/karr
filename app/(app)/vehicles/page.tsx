@@ -36,7 +36,7 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title="Vehicles" description="Your rental fleet." action={<NewVehicleDialog />} />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         {rows.length === 0 ? (
           <EmptyState title="No vehicles yet" description="Add your rental fleet to track availability and link vehicles to bookings." />
         ) : (

@@ -74,10 +74,10 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
           </div>
         }
       />
-      <div className="border-b border-border bg-surface px-8 py-4">
+      <div className="border-b border-border bg-surface px-4 sm:px-6 lg:px-8 py-4">
         <LeadFilters profiles={orgProfiles} initial={params} />
       </div>
-      <div className="flex-1 overflow-x-auto px-8 py-6">
+      <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
         {truncated ? (
           <p className="mb-4 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-muted">
             Showing the {BOARD_LIMIT} most recent leads. Use search or filters to find older ones.

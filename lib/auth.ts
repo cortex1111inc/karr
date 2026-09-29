@@ -29,8 +29,9 @@ export async function requireUser(): Promise<CurrentUser> {
 
   const [profile] = await db.select().from(profiles).where(eq(profiles.id, user.id)).limit(1);
 
+  // Signed in but no workspace yet (e.g. just confirmed their signup email).
   if (!profile) {
-    redirect("/login?error=no-profile");
+    redirect("/onboarding");
   }
 
   return {

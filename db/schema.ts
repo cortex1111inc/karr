@@ -42,6 +42,8 @@ export const organizations = pgTable(
     // Default GST rate (%) pre-filled on new quotations/invoices when GST is
     // enabled. Org can still override per-document.
     defaultGstRate: integer("default_gst_rate").notNull().default(18),
+    // Set when the owner hides the dashboard's getting-started checklist.
+    onboardingDismissedAt: timestamp("onboarding_dismissed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("organizations_slug_idx").on(table.slug)],

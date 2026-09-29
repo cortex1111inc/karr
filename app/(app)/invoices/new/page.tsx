@@ -36,7 +36,7 @@ export default async function NewInvoicePage({
   return (
     <>
       <PageHeader title="New invoice" description="Bill a customer for a completed booking or service." />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         <Card className="max-w-3xl p-6">
           <InvoiceForm
             defaultContactName={defaultContactName}

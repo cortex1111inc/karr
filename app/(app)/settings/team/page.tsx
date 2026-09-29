@@ -16,7 +16,7 @@ export default async function TeamPage() {
   return (
     <>
       <PageHeader title="Team" description="Who has access to this workspace." />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         {user.role === "owner" ? (
           <Card className="mb-6 p-5">
             <h2 className="font-display text-sm font-bold">Invite a teammate</h2>

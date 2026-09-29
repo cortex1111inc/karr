@@ -150,19 +150,19 @@ No tests exist. Every later workstream should land with tests, so this comes ear
 
 The app is desktop-only today. Business owners will use it on phones at the service counter.
 
-- [ ] **App shell** (`app/(app)/layout.tsx`, `nav-links.tsx`): below `lg`, the sidebar becomes an off-canvas drawer opened from a top bar (logo, page title, hamburger, notifications bell with unread count). Close on navigation and on backdrop tap. Respect `env(safe-area-inset-*)`.
-- [ ] **Grouped navigation** — 12 flat links today (14 after WS6), too many to scan. Proposed groups:
+- [x] **App shell** (`app/(app)/app-shell.tsx`): below `lg`, a top bar (menu button, logo, notifications bell with unread count) opens navigation in a native `<dialog>` drawer — focus trap + Escape for free; closes on link tap and backdrop tap; safe-area insets respected. Shared `components/layout/logo.tsx`.
+- [x] **Grouped navigation** — 12 flat links today (14 after WS6), too many to scan. Proposed groups:
   - *(top)* Dashboard, Notifications
   - **Sales:** Leads, Customers, Quotations, Invoices
   - **Operations:** Vehicles, Inventory
   - **Growth:** Campaigns, Reports, *(WS6)* Website, Tracking links
   - **Workspace:** Integrations, Settings
-- [ ] **Page padding** `px-8` → `px-4 sm:px-6 lg:px-8` everywhere (`components/layout/page-header.tsx` and every page body). Consider moving the padding into a `PageBody` component so it's set once.
-- [ ] **Pipeline board** (`leads/pipeline-board.tsx`): on mobile, replace the 5-column `min-w-[1000px]` grid with stage tabs (one column visible, swipe/tap between stages) or horizontal scroll-snap columns.
-- [ ] **Tables → cards on mobile**: reports tables, line-item editor (`components/billing/line-items-editor.tsx` has `min-w-[520px]`), invoice/quotation detail tables.
-- [ ] **Dialogs full-screen on mobile** (native `<dialog>` with `max-w-md` → `w-full h-full sm:h-auto sm:max-w-md`).
-- [ ] **Page headers** with multiple actions (e.g. invoices: Export CSV + New invoice) wrap cleanly on narrow widths.
-- [ ] **Dashboard refresh**: KPI cards gain a trend delta vs. previous period (reuse `/reports` queries), a "Today" list (follow-ups due, low stock items, unpaid invoices) with direct links, instead of counts only.
+- [x] **Page padding** `px-8` → `px-4 sm:px-6 lg:px-8` everywhere (24 occurrences); long share URLs wrap (`break-all`).
+- [x] **Pipeline board**: horizontal scroll-snap columns below `xl` (one column per swipe on phones), 5-column grid from `xl` up.
+- [x] **Tables → cards on mobile**: the line-item editor is now a CSS grid that stacks into one card per line on phones, with a visible label per field. Read-only tables (reports, invoice/quotation detail) stay tables inside their own `overflow-x-auto` container — acceptable for read-only data.
+- [x] **Dialogs full-screen on mobile** (done in WS3's `FormDialog`).
+- [x] **Page headers** wrap on narrow widths; actions group wraps too.
+- [x] **Dashboard refresh**: 30-day KPIs (leads in, booked, revenue collected) with change vs the previous 30 days, outstanding balance, and a "Needs attention" section listing follow-ups due, unpaid invoices and low-stock items with direct links.
 - [ ] Dark mode — **not planned**; don't add unless asked.
 
 **Acceptance:** every `(app)` route usable at 390px width without horizontal page scroll (only tables/boards may scroll inside their own container); keyboard can open/close the drawer.
@@ -173,14 +173,14 @@ The app is desktop-only today. Business owners will use it on phones at the serv
 
 Right now a new business can't sign up — someone has to run `db:seed`. This blocks selling the product.
 
-- [ ] **`/signup`** (public): business name, owner name, email, password → `supabase.auth.signUp` → on success, server action (service role, `lib/supabase/admin.ts`) creates `organizations` (with `uniqueSlug`) + owner `profiles` row. Handle the "email confirmation required" case (depends on the Supabase project's Auth setting — ask user which it is).
-- [ ] **`/auth/callback`** route handler: `exchangeCodeForSession` for email-confirmation, magic-link, invite and recovery links (check current `@supabase/ssr` docs for Next 16). `/auth` is already in `PUBLIC_PATHS`.
-- [ ] **Forgot / reset password**: `/forgot-password` (`resetPasswordForEmail` with `redirectTo` → `/auth/callback?next=/reset-password`), `/reset-password` (`updateUser({ password })`). Add both to `PUBLIC_PATHS` where needed.
-- [ ] **Invite acceptance**: staff invited via `/settings/team` get a Supabase invite email; link must land on a "set your password" page, not the login page. Their `profiles` row already exists (created at invite time).
-- [ ] **Account page** `/settings/account`: change name, change password, sign out everywhere.
-- [ ] **First-run onboarding checklist** on the dashboard for a brand-new org: add first lead, share booking link, connect WhatsApp, set GST default, invite a teammate. Dismissible; derived from data (not a new table) where possible.
-- [ ] Update `lib/auth.ts#requireUser` redirect for "session exists but no profile" (currently `/login?error=no-profile`) to route into onboarding instead.
-- [ ] **Supabase dashboard config the user must do** (list it for them): Site URL + redirect URLs (`https://<domain>/auth/callback`), SMTP (Supabase's built-in email is rate-limited heavily — Resend SMTP works here, ties into D3), email templates.
+- [x] **`/signup`** (public): *(done — workspace is created by `lib/workspace.ts#createWorkspace` immediately if Supabase returns a session, otherwise after email confirmation via `/onboarding`, prefilled from signup metadata; existing-email case detected via empty `identities`; rate-limited)* business name, owner name, email, password → `supabase.auth.signUp` → on success, server action (service role, `lib/supabase/admin.ts`) creates `organizations` (with `uniqueSlug`) + owner `profiles` row. Handle the "email confirmation required" case (depends on the Supabase project's Auth setting — ask user which it is).
+- [x] **`/auth/callback`** route handler: *(handles both `?code=` and `?token_hash=&type=` links; invalid/expired → `/login?error=link`)* `exchangeCodeForSession` for email-confirmation, magic-link, invite and recovery links (check current `@supabase/ssr` docs for Next 16). `/auth` is already in `PUBLIC_PATHS`.
+- [x] **Forgot / reset password**: *(same response whether or not the email exists; rate-limited)* `/forgot-password` (`resetPasswordForEmail` with `redirectTo` → `/auth/callback?next=/reset-password`), `/reset-password` (`updateUser({ password })`). Add both to `PUBLIC_PATHS` where needed.
+- [x] **Invite acceptance**: *(invites now pass `redirectTo` → callback → `/reset-password?welcome=1`; removing a teammate also deletes their login, so they can't sign back in)* staff invited via `/settings/team` get a Supabase invite email; link must land on a "set your password" page, not the login page. Their `profiles` row already exists (created at invite time).
+- [x] **Account page** `/settings/account`: change name, change password, sign out everywhere.
+- [x] **First-run onboarding checklist** *(5 steps derived from data; owner can hide via `organizations.onboarding_dismissed_at`)* on the dashboard for a brand-new org: add first lead, share booking link, connect WhatsApp, set GST default, invite a teammate. Dismissible; derived from data (not a new table) where possible.
+- [x] Update `lib/auth.ts#requireUser` redirect for "session exists but no profile" (currently `/login?error=no-profile`) to route into onboarding instead.
+- [ ] **Supabase dashboard config the user must do** *(still needed — see README → Auth setup)* (list it for them): Site URL + redirect URLs (`https://<domain>/auth/callback`), SMTP (Supabase's built-in email is rate-limited heavily — Resend SMTP works here, ties into D3), email templates.
 
 **Acceptance:** a brand-new email can sign up, confirm, land in an empty workspace, and invite a teammate who can set a password and sign in — end to end, without `db:seed`.
 

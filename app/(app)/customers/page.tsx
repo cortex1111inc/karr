@@ -47,7 +47,7 @@ export default async function CustomersPage({
           </a>
         }
       />
-      <div className="border-b border-border bg-surface px-8 py-4">
+      <div className="border-b border-border bg-surface px-4 sm:px-6 lg:px-8 py-4">
         <form method="get" className="flex items-end gap-3">
           <div className="w-72">
             <label htmlFor="q" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-faint">
@@ -65,7 +65,7 @@ export default async function CustomersPage({
           ) : null}
         </form>
       </div>
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         {orgCustomers.length === 0 ? (
           q ? (
             <EmptyState title="No matches" description={`No customers match “${q}”.`} />

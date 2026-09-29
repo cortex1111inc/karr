@@ -1,7 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/book", "/status", "/quote", "/invoice", "/api/cron"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/auth",
+  "/book",
+  "/status",
+  "/quote",
+  "/invoice",
+  "/api/cron",
+];
+
+// Signed-in people have no reason to see these; send them to the app.
+const SIGNED_OUT_ONLY = ["/login", "/signup", "/forgot-password"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
@@ -42,7 +55,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (user && request.nextUrl.pathname === "/login") {
+  if (user && SIGNED_OUT_ONLY.includes(request.nextUrl.pathname)) {
     const homeUrl = request.nextUrl.clone();
     homeUrl.pathname = "/dashboard";
     homeUrl.search = "";

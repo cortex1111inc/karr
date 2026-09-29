@@ -37,6 +37,16 @@ CRM, lead management, retention and billing for car rental and service businesse
    ```
    Sign in at `http://localhost:3000/login`.
 
+## Auth & onboarding
+
+- **Signup** (`/signup`) → Supabase `signUp` with the business and owner name in user metadata. If Supabase returns a session (email confirmation off), the workspace is created right away; otherwise the confirmation link goes through `/auth/callback` to `/onboarding`, which creates it (prefilled). `lib/workspace.ts#createWorkspace` is idempotent per login.
+- **Every emailed link** (confirmation, recovery, invite) lands on `/auth/callback`, which supports both `?code=` and `?token_hash=&type=` styles and only redirects to same-site paths (`lib/redirects.ts#safeNextPath` — also used by login).
+- **Password reset**: `/forgot-password` → email → `/reset-password`. **Staff invites** land on `/reset-password?welcome=1` to set a password. **Removing a teammate** deletes their login too.
+- `/settings/account`: change name/password, sign out of every device.
+- Login, signup and reset are rate-limited per IP (`lib/rate-limit.ts`).
+
+**Supabase dashboard setup (one-time, can't be done from code):** Authentication → URL Configuration: set **Site URL** to the production URL and add `https://<your-domain>/auth/callback` (and `http://localhost:3000/auth/callback` for dev) to **Redirect URLs** — emailed links to any other URL are rejected. Configure custom **SMTP** (Supabase's built-in sender is heavily rate-limited — fine for testing, not for real customers).
+
 ## Integrations
 
 Third-party credentials (currently: WhatsApp) are connected through **Settings → Integrations** (`/integrations`) — no code or redeploy needed. The owner pastes a Phone Number ID + Access Token there; it's encrypted (`lib/crypto.ts`, AES-256-GCM, key from `INTEGRATIONS_ENCRYPTION_KEY`) and stored in the `integrations` table, one row per org per provider. The saved token is never sent back to the browser — the form only ever accepts a new one, never displays the old one.

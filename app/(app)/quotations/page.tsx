@@ -40,7 +40,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
         description="Price estimates sent before a booking is confirmed."
         action={<ButtonLink href="/quotations/new" variant="accent" size="sm">New quotation</ButtonLink>}
       />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         {rows.length === 0 ? (
           <EmptyState title="No quotations yet" description="Send a price estimate before a booking is confirmed — or start one from a lead." action={<ButtonLink href="/quotations/new" variant="accent" size="sm">New quotation</ButtonLink>} />
         ) : (

@@ -26,7 +26,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   return (
     <>
       <PageHeader title="Notifications" description="Follow-ups, stale leads, and reminders that need your attention." action={<MarkAllReadButton />} />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         <Card className="divide-y divide-border">
           {items.length === 0 ? (
             <p className="p-5 text-sm text-faint">You&apos;re all caught up. Follow-up reminders, stale leads and low-stock alerts land here.</p>

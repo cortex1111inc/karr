@@ -47,7 +47,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
           </div>
         }
       />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
           <Card className="p-5">
             <div className="flex items-center justify-between">
@@ -107,7 +107,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
               <h2 className="font-display text-sm font-bold">Share</h2>
               <p className="mt-0.5 text-sm text-muted">Send this link to the customer — no login needed.</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <code className="rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-xs">{publicUrl}</code>
+                <code className="break-all rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-xs">{publicUrl}</code>
                 <CopyLinkButton url={publicUrl} />
               </div>
             </Card>

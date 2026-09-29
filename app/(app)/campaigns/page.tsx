@@ -21,7 +21,7 @@ export default async function CampaignsPage() {
   return (
     <>
       <PageHeader title="Campaigns" description="Bring past customers back with a WhatsApp broadcast." />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.2fr]">
           <Card className="p-5">
             <h2 className="font-display text-sm font-bold">New campaign</h2>

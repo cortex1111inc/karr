@@ -7,35 +7,24 @@ import type { leads } from "@/db/schema";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/input";
+import { LEAD_STAGES as STAGES, SOURCE_LABEL as SOURCE_LABELS } from "@/lib/leads";
 import { updateLeadStage } from "./actions";
 
 type Lead = InferSelectModel<typeof leads>;
 
-const STAGES = [
-  { value: "new", label: "New" },
-  { value: "contacted", label: "Contacted" },
-  { value: "quoted", label: "Quoted" },
-  { value: "booked", label: "Booked" },
-  { value: "lost", label: "Lost" },
-] as const;
-
-const SOURCE_LABELS: Record<Lead["source"], string> = {
-  whatsapp: "WhatsApp",
-  instagram: "Instagram",
-  call: "Call",
-  website: "Website",
-  walk_in: "Walk-in",
-  referral: "Referral",
-  other: "Other",
-};
-
 export function PipelineBoard({ leads }: { leads: Lead[] }) {
   return (
-    <div className="grid min-w-[1000px] grid-cols-5 gap-4">
+    // Below xl: horizontally scrolling columns that snap one at a time (thumb-
+    // friendly on phones). xl+: all five stages side by side.
+    <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3 xl:grid xl:grid-cols-5 xl:overflow-visible xl:pb-0">
       {STAGES.map((stage) => {
         const stageLeads = leads.filter((lead) => lead.stage === stage.value);
         return (
-          <div key={stage.value} className="flex flex-col gap-3">
+          <section
+            key={stage.value}
+            aria-label={`${stage.label} (${stageLeads.length})`}
+            className="flex w-[82vw] max-w-xs shrink-0 snap-start flex-col gap-3 sm:w-72 xl:w-auto xl:max-w-none"
+          >
             <div className="flex items-center justify-between px-1">
               <span className="font-mono text-xs uppercase tracking-wide text-faint">{stage.label}</span>
               <span className="font-mono text-xs tabular-nums text-faint">{stageLeads.length}</span>
@@ -49,7 +38,7 @@ export function PipelineBoard({ leads }: { leads: Lead[] }) {
                 stageLeads.map((lead) => <LeadCard key={lead.id} lead={lead} />)
               )}
             </div>
-          </div>
+          </section>
         );
       })}
     </div>

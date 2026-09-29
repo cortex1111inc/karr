@@ -50,7 +50,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
           </div>
         }
       />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         {rows.length === 0 ? (
           <EmptyState title="No invoices yet" description="Bill a customer directly, or convert an accepted quotation." action={<ButtonLink href="/invoices/new" variant="accent" size="sm">New invoice</ButtonLink>} />
         ) : (

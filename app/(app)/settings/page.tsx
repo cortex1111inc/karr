@@ -19,7 +19,7 @@ export default async function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" description="Workspace-wide preferences." />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col gap-6">
           <Card className="p-5">
             <h2 className="font-display text-sm font-bold">Slot booking link</h2>
@@ -27,7 +27,7 @@ export default async function SettingsPage() {
               Share this on Instagram, WhatsApp, or your website — anyone can request a booking without an account.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <code className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs">{bookingUrl}</code>
+              <code className="break-all rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs">{bookingUrl}</code>
               <CopyLinkButton url={bookingUrl} />
             </div>
           </Card>
@@ -59,6 +59,14 @@ export default async function SettingsPage() {
             <p className="mt-0.5 text-sm text-muted">Connect WhatsApp and other third-party services.</p>
             <Link href="/integrations" className="mt-3 inline-block text-sm font-medium text-accent-deep hover:underline">
               Manage integrations →
+            </Link>
+          </Card>
+
+          <Card className="p-5">
+            <h2 className="font-display text-sm font-bold">Your account</h2>
+            <p className="mt-0.5 text-sm text-muted">Your name, password, and signed-in devices.</p>
+            <Link href="/settings/account" className="mt-3 inline-block text-sm font-medium text-accent-deep hover:underline">
+              Manage account →
             </Link>
           </Card>
 

@@ -49,7 +49,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
         }
         action={user.role === "owner" ? <DeleteVehicleButton vehicleId={vehicle.id} registrationNumber={vehicle.registrationNumber} /> : undefined}
       />
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
           <Card className="p-5">
             <h2 className="font-display text-sm font-bold">Details</h2>
