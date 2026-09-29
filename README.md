@@ -97,6 +97,12 @@ Two separate features, not one — "stock" means different things for a rental b
 
 All aggregation happens in JS after fetching the date-range rows (no SQL `GROUP BY`/`date_trunc`) — simpler to read at this data scale, revisit only if row counts ever justify the complexity. "Conversion" means *currently* `stage = 'booked'`, not a true point-in-time funnel — accurate enough for a trend signal, not a precise historical audit (would need a stage-change-history table for that).
 
+## Growth (marketing attribution & micro-site)
+
+- **Tracking links** (`/growth/links`): one per influencer/ad, public URL `/r/[orgSlug]/[code]`. Visiting it records a click (one per visitor per link per 10 min), sets a 30-day `vs_ref` cookie, and redirects to the org's site (or booking page if unpublished). Bookings are credited from `?ref=<code>` first, else the cookie — both resolved within the org only; archived links keep redirecting but stop getting credit. Staff can also attribute a lead manually on the lead form. Named "tracking links" to stay distinct from `campaigns` (WhatsApp broadcasts).
+- **Micro-site** (`/growth/website` → public `/site/[orgSlug]`): headline, services with "from ₹", about, hours, address/map, WhatsApp click-to-chat, embedded booking form, 4 accent presets. Owner-entered URLs must be `https://` (`lib/growth-site-schema.ts` — they're rendered on a public page).
+- **Growth dashboard** (`/growth`): clicks, leads, booked, conversion, revenue and commission per link. Revenue attribution (`lib/growth-stats.ts`): payment → invoice's lead's link, else the link that first brought in the invoice's customer. Commission: flat ₹ per booked lead, or % of attributed revenue.
+
 ## Scripts
 
 | Command | What it does |

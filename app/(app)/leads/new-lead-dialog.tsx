@@ -4,8 +4,9 @@ import { FormDialog } from "@/components/ui/dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { LEAD_SOURCES } from "@/lib/leads";
 import { createLead } from "./actions";
+import { TrackingLinkSelect, type LinkOption } from "./tracking-link-select";
 
-export function NewLeadDialog() {
+export function NewLeadDialog({ links = [] }: { links?: LinkOption[] }) {
   return (
     <FormDialog
       triggerLabel="New lead"
@@ -37,6 +38,7 @@ export function NewLeadDialog() {
           ))}
         </Select>
       </div>
+      <TrackingLinkSelect links={links} />
     </FormDialog>
   );
 }

@@ -265,6 +265,16 @@ export default async function ReportsPage({
             </Card>
           </div>
 
+          <Card className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-display text-sm font-bold">Marketing attribution</h2>
+              <p className="mt-0.5 text-sm text-muted">Leads, bookings, revenue and commission per influencer or ad link.</p>
+            </div>
+            <a href="/growth" className="text-sm font-medium text-accent-deep hover:underline">
+              Open Growth →
+            </a>
+          </Card>
+
           <Card className="p-5">
             <h2 className="font-display text-sm font-bold">Export data</h2>
             <p className="mt-0.5 text-sm text-muted">Full CSV export — not limited to the date range above.</p>

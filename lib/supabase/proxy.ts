@@ -10,6 +10,8 @@ const PUBLIC_PATHS = [
   "/status",
   "/quote",
   "/invoice",
+  "/site",
+  "/r",
   "/api/cron",
 ];
 

@@ -5,11 +5,24 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { customers, leadActivities, leadSourceEnum, leadStageEnum, leads, organizations, profiles, vehicles } from "@/db/schema";
+import { customers, leadActivities, leadSourceEnum, leadStageEnum, leads, organizations, profiles, trackingLinks, vehicles } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { generatePublicToken } from "@/lib/tokens";
 import { getSiteUrl } from "@/lib/site";
 import { sendWhatsApp } from "@/lib/whatsapp";
+
+
+// A tracking link picked in a form must belong to this org; blank = none.
+async function orgTrackingLinkId(orgId: string, raw: FormDataEntryValue | null): Promise<string | null | "invalid"> {
+  const id = typeof raw === "string" ? raw.trim() : "";
+  if (!id) return null;
+  const [link] = await db
+    .select({ id: trackingLinks.id })
+    .from(trackingLinks)
+    .where(and(eq(trackingLinks.id, id), eq(trackingLinks.orgId, orgId)))
+    .limit(1);
+  return link ? link.id : "invalid";
+}
 
 const createLeadSchema = z.object({
   contactName: z.string().trim().min(1, "Name is required"),
@@ -32,10 +45,14 @@ export async function createLead(_prevState: { error: string | null }, formData:
     return { error: parsed.error.issues[0]?.message ?? "Check the form and try again." };
   }
 
+  const trackingLinkId = await orgTrackingLinkId(user.orgId, formData.get("trackingLinkId"));
+  if (trackingLinkId === "invalid") return { error: "That tracking link doesn't exist." };
+
   await db.insert(leads).values({
     orgId: user.orgId,
     assignedTo: user.id,
     publicToken: generatePublicToken(),
+    trackingLinkId,
     ...parsed.data,
   });
 
@@ -94,9 +111,17 @@ export async function updateLead(leadId: string, _prevState: { error: string | n
     return { error: parsed.error.issues[0]?.message ?? "Check the form and try again." };
   }
 
+  // Only touch attribution when the form actually sent the field.
+  let trackingPatch: { trackingLinkId?: string | null } = {};
+  if (formData.has("trackingLinkId")) {
+    const trackingLinkId = await orgTrackingLinkId(user.orgId, formData.get("trackingLinkId"));
+    if (trackingLinkId === "invalid") return { error: "That tracking link doesn't exist." };
+    trackingPatch = { trackingLinkId };
+  }
+
   await db
     .update(leads)
-    .set({ ...parsed.data, updatedAt: new Date() })
+    .set({ ...parsed.data, ...trackingPatch, updatedAt: new Date() })
     .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)));
 
   revalidatePath(`/leads/${leadId}`);

@@ -214,11 +214,11 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS tracking_link_id uuid REFERENCES trac
 CREATE INDEX IF NOT EXISTS leads_tracking_link_idx ON leads (tracking_link_id);
 ```
 
-- [ ] `/growth/links` — CRUD, copy-link button (reuse `components/ui/copy-link-button.tsx`), archive.
-- [ ] **Short redirect** `/r/[orgSlug]/[code]` (public): look up link, set a first-party cookie (`vs_ref=<linkId>`, ~30 days), redirect to the org's micro-site (6.2) or `/book/[slug]`.
-- [ ] **Capture**: `/book/[slug]` accepts `?ref=<code>` or reads the cookie; `submitBooking` stores `tracking_link_id` and sets `source` to `website` (keep `source` as the channel enum; the link is the finer attribution).
-- [ ] **Manual attribution**: lead create/edit forms get an optional "Tracking link" select, for walk-ins who mention an influencer.
-- [ ] Add `/r` to `PUBLIC_PATHS`.
+- [x] `/growth/links` — CRUD, copy-link button (reuse `components/ui/copy-link-button.tsx`), archive.
+- [x] **Short redirect** `/r/[orgSlug]/[code]` (public): look up link, set a first-party cookie (`vs_ref=<linkId>`, ~30 days), redirect to the org's micro-site (6.2) or `/book/[slug]`.
+- [x] **Capture**: `/book/[slug]` accepts `?ref=<code>` or reads the cookie; `submitBooking` stores `tracking_link_id` and sets `source` to `website` (keep `source` as the channel enum; the link is the finer attribution).
+- [x] **Manual attribution**: lead create/edit forms get an optional "Tracking link" select, for walk-ins who mention an influencer.
+- [x] Add `/r` to `PUBLIC_PATHS`.
 
 ### 6.2 Per-org public micro-website
 
@@ -243,17 +243,17 @@ CREATE TABLE IF NOT EXISTS org_sites (
 ALTER TABLE org_sites ENABLE ROW LEVEL SECURITY;
 ```
 
-- [ ] **Public page `/site/[slug]`** (reuse `organizations.slug`): hero, services grid with "from ₹X", about, hours/address/map link, WhatsApp click-to-chat, embedded booking form (reuse `app/book/[slug]/booking-form.tsx`, passing through the tracking ref). Unpublished → 404. `generateMetadata` for title/description/OG. Mobile-first — this is what influencer traffic lands on.
-- [ ] **Editor `/growth/website`**: form for every field, services list editor (add/remove/reorder rows — same interaction pattern as `LineItemsEditor`), publish toggle, "View live site" link. Zod validation; `services` validated as an array schema, not trusted as raw JSON.
-- [ ] Design: follow the brand direction in `../docs/landing-page.html` (warm neutrals, `#78BB45` accent, Inter Tight / Inter) but restrained — it's the *business's* site, not Vanspire's marketing page. Consider 2–3 accent presets the owner can pick.
-- [ ] Add `/site` to `PUBLIC_PATHS`.
+- [x] **Public page `/site/[slug]`** (reuse `organizations.slug`): hero, services grid with "from ₹X", about, hours/address/map link, WhatsApp click-to-chat, embedded booking form (reuse `app/book/[slug]/booking-form.tsx`, passing through the tracking ref). Unpublished → 404. `generateMetadata` for title/description/OG. Mobile-first — this is what influencer traffic lands on.
+- [x] **Editor `/growth/website`**: form for every field, services list editor (add/remove/reorder rows — same interaction pattern as `LineItemsEditor`), publish toggle, "View live site" link. Zod validation; `services` validated as an array schema, not trusted as raw JSON.
+- [x] Design: follow the brand direction in `../docs/landing-page.html` (warm neutrals, `#78BB45` accent, Inter Tight / Inter) but restrained — it's the *business's* site, not Vanspire's marketing page. Consider 2–3 accent presets the owner can pick.
+- [x] Add `/site` to `PUBLIC_PATHS`.
 - [ ] Later (not now): custom domains per org (needs Vercel domains API + DNS — defer).
 
 ### 6.3 Growth dashboard
 
-- [ ] **`/growth`** — per tracking link, for a date range (reuse `/reports` range picker): clicks (optional — needs a `tracking_link_clicks` table written by `/r/...`; cheap to add, decide with user), leads, booked, conversion rate, **revenue** (payments → invoices → leads.tracking_link_id), and **commission owed** if `commission_type` set.
-- [ ] Add a "By tracking link" section to `/reports` too, and a `tracking_link` column to the leads CSV export.
-- [ ] Owner-facing summary card on the dashboard: "This month: N leads from partners → ₹X revenue."
+- [x] **`/growth`** — per tracking link, for a date range (reuse `/reports` range picker): clicks (optional — needs a `tracking_link_clicks` table written by `/r/...`; cheap to add, decide with user), leads, booked, conversion rate, **revenue** (payments → invoices → leads.tracking_link_id), and **commission owed** if `commission_type` set.
+- [x] Add a "By tracking link" section to `/reports` too, and a `tracking_link` column to the leads CSV export.
+- [x] Owner-facing summary card on the dashboard: "This month: N leads from partners → ₹X revenue."
 
 **Acceptance:** create a link → open `/r/<slug>/<code>` in a fresh browser → book via the micro-site → lead shows the link → convert, invoice, record payment → `/growth` shows 1 lead, 1 booked, the revenue, and the commission.
 

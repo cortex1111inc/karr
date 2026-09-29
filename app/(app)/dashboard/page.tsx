@@ -2,7 +2,8 @@ import Link from "next/link";
 import { and, asc, count, eq, gte, inArray, isNotNull, lt, lte, notInArray, sql } from "drizzle-orm";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/db";
-import { customers, integrations, invoices, leads, organizations, payments, profiles, stockItems } from "@/db/schema";
+import { customers, integrations, invoices, leads, orgSites, organizations, payments, profiles, stockItems } from "@/db/schema";
+import { growthStats } from "@/lib/growth-stats";
 import { formatCurrency } from "@/lib/billing/money";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
@@ -115,13 +116,15 @@ export default async function DashboardPage() {
   ]);
 
   // Getting-started checklist: each step's "done" is derived from real data.
-  const [[orgRow], [anyLead], [anyWebLead], [whatsapp], [teamSize], [anyInvoice]] = await Promise.all([
+  const [[orgRow], [anyLead], [anyWebLead], [whatsapp], [teamSize], [anyInvoice], [site], growth] = await Promise.all([
     db.select({ dismissedAt: organizations.onboardingDismissedAt }).from(organizations).where(eq(organizations.id, org)),
     db.select({ n: count() }).from(leads).where(eq(leads.orgId, org)),
     db.select({ n: count() }).from(leads).where(and(eq(leads.orgId, org), eq(leads.source, "website"))),
     db.select({ n: count() }).from(integrations).where(and(eq(integrations.orgId, org), eq(integrations.provider, "whatsapp"))),
     db.select({ n: count() }).from(profiles).where(eq(profiles.orgId, org)),
     db.select({ n: count() }).from(invoices).where(eq(invoices.orgId, org)),
+    db.select({ published: orgSites.published }).from(orgSites).where(eq(orgSites.orgId, org)),
+    growthStats(org, periodStart, now),
   ]);
   const steps: Step[] = [
     { label: "Add your first lead", description: "Log an enquiry from a call, WhatsApp or walk-in.", href: "/leads", done: anyLead.n > 0 },
@@ -129,6 +132,7 @@ export default async function DashboardPage() {
     { label: "Connect WhatsApp", description: "Send confirmations and reminders from your own number.", href: "/integrations", done: whatsapp.n > 0 },
     { label: "Invite a teammate", description: "Give staff their own login to handle leads.", href: "/settings/team", done: teamSize.n > 1 },
     { label: "Send your first invoice", description: "Bill a customer with GST, and track what's paid.", href: "/invoices/new", done: anyInvoice.n > 0 },
+    { label: "Publish your website", description: "A mobile page with your services and a booking form.", href: "/growth/website", done: Boolean(site?.published) },
   ];
   const showGettingStarted = !orgRow.dismissedAt && steps.some((s) => !s.done);
 
@@ -208,6 +212,23 @@ export default async function DashboardPage() {
             </div>
           )}
         </section>
+
+        {growth.hasLinks ? (
+          <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-display text-sm font-bold">From tracking links · last 30 days</h2>
+              <p className="mt-1 text-sm text-muted">
+                <span className="font-medium text-foreground">{growth.totals.leads}</span> leads ·{" "}
+                <span className="font-medium text-foreground">{growth.totals.booked}</span> booked ·{" "}
+                <span className="font-medium text-foreground">{formatCurrency(growth.totals.revenue)}</span> revenue
+                {growth.totals.commission > 0 ? <> · {formatCurrency(growth.totals.commission)} commission owed</> : null}
+              </p>
+            </div>
+            <Link href="/growth" className="text-sm font-medium text-accent-deep hover:underline">
+              See by partner →
+            </Link>
+          </Card>
+        ) : null}
       </div>
     </>
   );

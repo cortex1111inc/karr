@@ -6,6 +6,7 @@ import type { leads } from "@/db/schema";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateLead } from "../actions";
+import { TrackingLinkSelect, type LinkOption } from "../tracking-link-select";
 import { useActionToast } from "@/components/ui/toast";
 
 type Lead = InferSelectModel<typeof leads>;
@@ -17,7 +18,7 @@ function toDateInputValue(date: Date | null) {
   return date.toISOString().slice(0, 10);
 }
 
-export function EditLeadForm({ lead }: { lead: Lead }) {
+export function EditLeadForm({ lead, links = [] }: { lead: Lead; links?: LinkOption[] }) {
   const [state, formAction, pending] = useActionState(updateLead.bind(null, lead.id), initialState);
   useActionToast(state, pending, "Lead updated");
 
@@ -51,6 +52,11 @@ export function EditLeadForm({ lead }: { lead: Lead }) {
         <Label htmlFor="followUpAt">Follow up on</Label>
         <Input id="followUpAt" name="followUpAt" type="date" defaultValue={toDateInputValue(lead.followUpAt)} />
       </div>
+      {links.length > 0 ? (
+        <div className="sm:col-span-2">
+          <TrackingLinkSelect links={links} defaultValue={lead.trackingLinkId} />
+        </div>
+      ) : null}
 
       {state.error ? (
         <p role="alert" className="text-sm text-danger sm:col-span-2">

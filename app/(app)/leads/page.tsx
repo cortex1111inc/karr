@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, ilike, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/db";
-import { leadSourceEnum, leads, profiles } from "@/db/schema";
+import { leadSourceEnum, leads, profiles, trackingLinks } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { PipelineBoard } from "./pipeline-board";
@@ -47,7 +47,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
     conditions.push(lte(leads.createdAt, to));
   }
 
-  const [fetchedLeads, orgProfiles] = await Promise.all([
+  const [fetchedLeads, orgProfiles, activeLinks] = await Promise.all([
     db
       .select()
       .from(leads)
@@ -55,6 +55,10 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
       .orderBy(desc(leads.createdAt))
       .limit(BOARD_LIMIT + 1),
     db.select({ id: profiles.id, fullName: profiles.fullName }).from(profiles).where(eq(profiles.orgId, user.orgId)),
+    db
+      .select({ id: trackingLinks.id, name: trackingLinks.name })
+      .from(trackingLinks)
+      .where(and(eq(trackingLinks.orgId, user.orgId), isNull(trackingLinks.archivedAt))),
   ]);
 
   const truncated = fetchedLeads.length > BOARD_LIMIT;
@@ -70,7 +74,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
             <a href="/api/export/leads" className="text-sm font-medium text-accent-deep hover:underline">
               Export CSV
             </a>
-            <NewLeadDialog />
+            <NewLeadDialog links={activeLinks} />
           </div>
         }
       />

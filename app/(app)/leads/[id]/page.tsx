@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/db";
-import { leadActivities, leads, profiles, vehicles } from "@/db/schema";
+import { leadActivities, leads, profiles, trackingLinks, vehicles } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
@@ -27,7 +27,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
   if (!lead) notFound();
 
-  const [orgProfiles, activities, orgVehicles] = await Promise.all([
+  const [orgProfiles, activities, orgVehicles, orgLinks] = await Promise.all([
     db.select({ id: profiles.id, fullName: profiles.fullName }).from(profiles).where(eq(profiles.orgId, user.orgId)),
     db
       .select({
@@ -45,6 +45,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
       .select({ id: vehicles.id, registrationNumber: vehicles.registrationNumber })
       .from(vehicles)
       .where(eq(vehicles.orgId, user.orgId)),
+    db.select({ id: trackingLinks.id, name: trackingLinks.name }).from(trackingLinks).where(eq(trackingLinks.orgId, user.orgId)),
   ]);
 
   return (
@@ -72,7 +73,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           <div className="flex flex-col gap-6">
             <Card className="p-5">
               <h2 className="font-display text-sm font-bold">Lead details</h2>
-              <EditLeadForm lead={lead} />
+              <EditLeadForm lead={lead} links={orgLinks} />
             </Card>
             <ActivityTimeline leadId={lead.id} activities={activities} />
           </div>

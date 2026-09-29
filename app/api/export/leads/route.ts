@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { leads, profiles } from "@/db/schema";
+import { leads, profiles, trackingLinks } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { csvResponse, toCsv } from "@/lib/csv";
 
@@ -15,11 +15,13 @@ export async function GET() {
       source: leads.source,
       stage: leads.stage,
       assignee: profiles.fullName,
+      trackingLink: trackingLinks.name,
       followUpAt: leads.followUpAt,
       createdAt: leads.createdAt,
     })
     .from(leads)
     .leftJoin(profiles, eq(leads.assignedTo, profiles.id))
+    .leftJoin(trackingLinks, eq(leads.trackingLinkId, trackingLinks.id))
     .where(eq(leads.orgId, user.orgId))
     .orderBy(desc(leads.createdAt));
 
@@ -30,6 +32,7 @@ export async function GET() {
     { key: "source", label: "Source" },
     { key: "stage", label: "Stage" },
     { key: "assignee", label: "Assigned to" },
+    { key: "trackingLink", label: "Tracking link" },
     { key: "followUpAt", label: "Follow-up date" },
     { key: "createdAt", label: "Created" },
   ]);

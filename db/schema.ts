@@ -10,6 +10,7 @@ import {
   index,
   uniqueIndex,
   primaryKey,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -116,6 +117,8 @@ export const leads = pgTable(
     // Optional — only meaningful for rental bookings. A lead can be linked
     // to a specific fleet vehicle once one's assigned.
     vehicleId: uuid("vehicle_id").references(() => vehicles.id, { onDelete: "set null" }),
+    // Marketing attribution (Growth module): which influencer/ad link brought them in.
+    trackingLinkId: uuid("tracking_link_id").references(() => trackingLinks.id, { onDelete: "set null" }),
     contactName: text("contact_name").notNull(),
     contactPhone: text("contact_phone").notNull(),
     interest: text("interest").notNull(),
@@ -564,3 +567,64 @@ export const rateLimits = pgTable(
   },
   (table) => [primaryKey({ columns: [table.key, table.windowStart] })],
 );
+
+// ===== Growth module (Phase 6) =====
+//
+// "Tracking links" = marketing attribution (an influencer's or ad's unique
+// link). Named to stay distinct from `campaigns`, which are WhatsApp
+// retention broadcasts from Phase 2.
+
+export const trackingLinks = pgTable(
+  "tracking_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    // Short, URL-safe, unique per org: /r/[orgSlug]/[code]
+    code: text("code").notNull(),
+    channel: text("channel", { enum: ["influencer", "instagram_ads", "google_ads", "flyer", "other"] }).notNull().default("influencer"),
+    partnerName: text("partner_name"),
+    commissionType: text("commission_type", { enum: ["none", "flat", "percent"] }).notNull().default("none"),
+    commissionValue: numeric("commission_value", { precision: 10, scale: 2 }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("tracking_links_org_code_idx").on(table.orgId, table.code)],
+);
+
+export const trackingLinkClicks = pgTable(
+  "tracking_link_clicks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    trackingLinkId: uuid("tracking_link_id").notNull().references(() => trackingLinks.id, { onDelete: "cascade" }),
+    clickedAt: timestamp("clicked_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("tracking_link_clicks_link_idx").on(table.trackingLinkId, table.clickedAt)],
+);
+
+export type SiteService = { name: string; description?: string; priceFrom?: number };
+
+// One public micro-site per org, served at /site/[organizations.slug].
+export const orgSites = pgTable("org_sites", {
+  orgId: uuid("org_id").primaryKey().references(() => organizations.id, { onDelete: "cascade" }),
+  published: boolean("published").notNull().default(false),
+  headline: text("headline"),
+  tagline: text("tagline"),
+  about: text("about"),
+  phone: text("phone"),
+  whatsappNumber: text("whatsapp_number"),
+  address: text("address"),
+  mapUrl: text("map_url"),
+  hours: text("hours"),
+  heroImageUrl: text("hero_image_url"),
+  accent: text("accent", { enum: ["green", "blue", "amber", "slate"] }).notNull().default("green"),
+  services: jsonb("services").$type<SiteService[]>().notNull().default([]),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const trackingLinksRelations = relations(trackingLinks, ({ one, many }) => ({
+  organization: one(organizations, { fields: [trackingLinks.orgId], references: [organizations.id] }),
+  leads: many(leads),
+  clicks: many(trackingLinkClicks),
+}));

@@ -7,7 +7,7 @@ import { submitBooking } from "./actions";
 
 const initialState: { error: string | null } = { error: null };
 
-export function BookingForm({ slug }: { slug: string }) {
+export function BookingForm({ slug, refCode }: { slug: string; refCode?: string }) {
   const [state, formAction, pending] = useActionState(submitBooking.bind(null, slug), initialState);
   // Stamped on the DOM after mount (not during render) so server and client
   // HTML match; the server uses it to reject too-fast (bot) submissions.
@@ -19,6 +19,7 @@ export function BookingForm({ slug }: { slug: string }) {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <input ref={startedAtRef} type="hidden" name="startedAt" defaultValue="" />
+      {refCode ? <input type="hidden" name="ref" value={refCode} /> : null}
       {/* Honeypot — hidden from people and assistive tech, filled by naive bots. */}
       <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
         <label htmlFor="website">Website</label>

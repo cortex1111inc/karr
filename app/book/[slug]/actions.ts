@@ -1,10 +1,12 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { leadSourceEnum, leads, organizations } from "@/db/schema";
+import { leadSourceEnum, leads, organizations, trackingLinks } from "@/db/schema";
+import { REF_COOKIE } from "@/lib/growth";
 import { generatePublicToken } from "@/lib/tokens";
 import { clientKey, consumeRateLimit } from "@/lib/rate-limit";
 
@@ -54,6 +56,8 @@ export async function submitBooking(slug: string, _prevState: { error: string | 
     return { error: parsed.error.issues[0]?.message ?? "Check the form and try again." };
   }
 
+  const trackingLinkId = await resolveAttribution(org.id, String(formData.get("ref") ?? ""));
+
   const interest = parsed.data.preferredTime
     ? `${parsed.data.interest} (preferred: ${parsed.data.preferredTime})`
     : parsed.data.interest;
@@ -66,9 +70,35 @@ export async function submitBooking(slug: string, _prevState: { error: string | 
       contactPhone: parsed.data.contactPhone,
       interest,
       source: "website" satisfies (typeof leadSourceEnum.enumValues)[number],
+      trackingLinkId,
       publicToken: generatePublicToken(),
     })
     .returning({ publicToken: leads.publicToken });
 
   redirect(`/status/${lead.publicToken}?new=1`);
+}
+
+// Which tracking link gets credit: an explicit ?ref=<code> on the page wins,
+// otherwise the 30-day cookie set by /r/... . Both are resolved within this
+// org only, and archived links never get credit.
+async function resolveAttribution(orgId: string, refCode: string): Promise<string | null> {
+  const active = and(eq(trackingLinks.orgId, orgId), isNull(trackingLinks.archivedAt));
+  if (refCode) {
+    const [byCode] = await db
+      .select({ id: trackingLinks.id })
+      .from(trackingLinks)
+      .where(and(active, eq(trackingLinks.code, refCode.toLowerCase().slice(0, 40))))
+      .limit(1);
+    if (byCode) return byCode.id;
+  }
+  const cookieId = (await cookies()).get(REF_COOKIE)?.value;
+  if (cookieId && /^[0-9a-f-]{36}$/i.test(cookieId)) {
+    const [byCookie] = await db
+      .select({ id: trackingLinks.id })
+      .from(trackingLinks)
+      .where(and(active, eq(trackingLinks.id, cookieId)))
+      .limit(1);
+    if (byCookie) return byCookie.id;
+  }
+  return null;
 }
