@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
 import { quotations } from "@/db/schema";
@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/billing/money";
+import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const STATUS_TONE: Record<string, "neutral" | "accent" | "danger"> = {
   draft: "neutral",
@@ -16,14 +18,20 @@ const STATUS_TONE: Record<string, "neutral" | "accent" | "danger"> = {
   declined: "danger",
 };
 
-export default async function QuotationsPage() {
+export default async function QuotationsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const user = await requireUser();
+  const page = parsePage((await searchParams).page);
 
-  const rows = await db
-    .select()
-    .from(quotations)
-    .where(eq(quotations.orgId, user.orgId))
-    .orderBy(desc(quotations.createdAt));
+  const [rows, [{ total }]] = await Promise.all([
+    db
+      .select()
+      .from(quotations)
+      .where(eq(quotations.orgId, user.orgId))
+      .orderBy(desc(quotations.createdAt))
+      .limit(PAGE_SIZE)
+      .offset((page - 1) * PAGE_SIZE),
+    db.select({ total: count() }).from(quotations).where(eq(quotations.orgId, user.orgId)),
+  ]);
 
   return (
     <>
@@ -34,7 +42,7 @@ export default async function QuotationsPage() {
       />
       <div className="flex-1 px-8 py-6">
         {rows.length === 0 ? (
-          <Card className="p-10 text-center text-sm text-muted">No quotations yet.</Card>
+          <EmptyState title="No quotations yet" description="Send a price estimate before a booking is confirmed — or start one from a lead." action={<ButtonLink href="/quotations/new" variant="accent" size="sm">New quotation</ButtonLink>} />
         ) : (
           <Card className="divide-y divide-border">
             {rows.map((q) => (
@@ -55,6 +63,7 @@ export default async function QuotationsPage() {
             ))}
           </Card>
         )}
+        <Pagination page={page} total={total} pathname="/quotations" />
       </div>
     </>
   );

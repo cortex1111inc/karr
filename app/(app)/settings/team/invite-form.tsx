@@ -4,12 +4,14 @@ import { useActionState, useEffect, useRef } from "react";
 import { Input, Label, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { inviteTeammate } from "./actions";
+import { useActionToast } from "@/components/ui/toast";
 
 const initialState: { error: string | null } = { error: null };
 
 export function InviteForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, pending] = useActionState(inviteTeammate, initialState);
+  useActionToast(state, pending, "Invite sent");
 
   useEffect(() => {
     if (state.error === null && !pending) formRef.current?.reset();

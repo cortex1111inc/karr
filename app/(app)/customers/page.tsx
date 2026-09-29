@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
@@ -7,14 +7,17 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const user = await requireUser();
-  const { q } = await searchParams;
+  const { q, page: pageParam } = await searchParams;
+  const page = parsePage(pageParam);
 
   const conditions = [eq(customers.orgId, user.orgId)];
   if (q) {
@@ -22,11 +25,16 @@ export default async function CustomersPage({
     conditions.push(or(ilike(customers.fullName, term), ilike(customers.phone, term))!);
   }
 
-  const orgCustomers = await db
-    .select()
-    .from(customers)
-    .where(and(...conditions))
-    .orderBy(desc(customers.createdAt));
+  const [orgCustomers, [{ total }]] = await Promise.all([
+    db
+      .select()
+      .from(customers)
+      .where(and(...conditions))
+      .orderBy(desc(customers.createdAt))
+      .limit(PAGE_SIZE)
+      .offset((page - 1) * PAGE_SIZE),
+    db.select({ total: count() }).from(customers).where(and(...conditions)),
+  ]);
 
   return (
     <>
@@ -59,9 +67,15 @@ export default async function CustomersPage({
       </div>
       <div className="flex-1 px-8 py-6">
         {orgCustomers.length === 0 ? (
-          <Card className="p-10 text-center text-sm text-muted">
-            No customers yet — they&apos;ll show up here once a lead is marked booked and converted.
-          </Card>
+          q ? (
+            <EmptyState title="No matches" description={`No customers match “${q}”.`} />
+          ) : (
+            <EmptyState
+              title="No customers yet"
+              description="Customers appear here once a lead is converted — open a lead and choose “Convert to customer”."
+              action={<ButtonLink href="/leads" variant="ghost" size="sm">Go to leads</ButtonLink>}
+            />
+          )
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {orgCustomers.map((customer) => (
@@ -77,6 +91,7 @@ export default async function CustomersPage({
             ))}
           </div>
         )}
+        <Pagination page={page} total={total} pathname="/customers" searchParams={{ q }} />
       </div>
     </>
   );

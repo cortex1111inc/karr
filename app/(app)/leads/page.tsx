@@ -7,6 +7,9 @@ import { PipelineBoard } from "./pipeline-board";
 import { NewLeadDialog } from "./new-lead-dialog";
 import { LeadFilters } from "./lead-filters";
 
+// A board can't paginate the way a list does; cap it and ask for filters instead.
+const BOARD_LIMIT = 300;
+
 type SearchParams = {
   q?: string;
   source?: string;
@@ -44,14 +47,18 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
     conditions.push(lte(leads.createdAt, to));
   }
 
-  const [orgLeads, orgProfiles] = await Promise.all([
+  const [fetchedLeads, orgProfiles] = await Promise.all([
     db
       .select()
       .from(leads)
       .where(and(...conditions))
-      .orderBy(desc(leads.createdAt)),
+      .orderBy(desc(leads.createdAt))
+      .limit(BOARD_LIMIT + 1),
     db.select({ id: profiles.id, fullName: profiles.fullName }).from(profiles).where(eq(profiles.orgId, user.orgId)),
   ]);
+
+  const truncated = fetchedLeads.length > BOARD_LIMIT;
+  const orgLeads = truncated ? fetchedLeads.slice(0, BOARD_LIMIT) : fetchedLeads;
 
   return (
     <>
@@ -71,6 +78,11 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         <LeadFilters profiles={orgProfiles} initial={params} />
       </div>
       <div className="flex-1 overflow-x-auto px-8 py-6">
+        {truncated ? (
+          <p className="mb-4 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-muted">
+            Showing the {BOARD_LIMIT} most recent leads. Use search or filters to find older ones.
+          </p>
+        ) : null}
         <PipelineBoard leads={orgLeads} />
       </div>
     </>

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { addLeadNote } from "../actions";
+import { useActionToast } from "@/components/ui/toast";
 
 type Activity = {
   id: string;
@@ -26,6 +27,7 @@ const KIND_LABEL: Record<Activity["kind"], string> = {
 export function ActivityTimeline({ leadId, activities }: { leadId: string; activities: Activity[] }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, pending] = useActionState(addLeadNote.bind(null, leadId), initialState);
+  useActionToast(state, pending, "Note added");
 
   useEffect(() => {
     if (state.error === null && !pending) formRef.current?.reset();

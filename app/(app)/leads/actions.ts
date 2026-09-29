@@ -160,7 +160,11 @@ export async function addLeadNote(leadId: string, _prevState: { error: string | 
   return { error: null };
 }
 
-export async function convertLeadToCustomer(leadId: string, formData: FormData) {
+export async function convertLeadToCustomer(
+  leadId: string,
+  _prevState: { error: string | null },
+  formData: FormData,
+): Promise<{ error: string | null }> {
   const user = await requireUser();
 
   const [lead] = await db
@@ -169,7 +173,8 @@ export async function convertLeadToCustomer(leadId: string, formData: FormData) 
     .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)))
     .limit(1);
 
-  if (!lead) return;
+  if (!lead) return { error: "Lead not found." };
+  if (lead.customerId) return { error: "This lead is already a customer." };
 
   const [org] = await db
     .select({ serviceIntervalDays: organizations.serviceIntervalDays })

@@ -1,23 +1,30 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Select } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/toast";
 import { deleteInvoice, updateInvoiceStatus } from "../actions";
 
 const MANUAL_STATUSES = ["draft", "sent", "void"] as const;
 
 export function InvoiceStatusSelect({ invoiceId, status }: { invoiceId: string; status: string }) {
   const [isPending, startTransition] = useTransition();
+  const toast = useToast();
 
   return (
     <Select
       className="w-32"
       value={status}
       disabled={isPending}
+      aria-label="Invoice status"
       onChange={(e) => {
         const next = e.target.value as (typeof MANUAL_STATUSES)[number];
-        startTransition(() => updateInvoiceStatus(invoiceId, next));
+        startTransition(async () => {
+          await updateInvoiceStatus(invoiceId, next);
+          toast(`Marked ${next}`);
+        });
       }}
     >
       {MANUAL_STATUSES.map((s) => (
@@ -30,19 +37,20 @@ export function InvoiceStatusSelect({ invoiceId, status }: { invoiceId: string; 
 }
 
 export function DeleteInvoiceButton({ invoiceId }: { invoiceId: string }) {
-  const [isPending, startTransition] = useTransition();
-
+  const router = useRouter();
   return (
-    <Button
+    <ConfirmButton
+      label="Delete draft"
+      pendingLabel="Deleting…"
       variant="ghost"
-      size="sm"
-      disabled={isPending}
-      onClick={() => {
-        if (!window.confirm("Delete this draft invoice?")) return;
-        startTransition(() => deleteInvoice(invoiceId));
+      title="Delete this draft invoice?"
+      body="Only drafts can be deleted. The invoice number isn't reused."
+      confirmLabel="Delete"
+      successMessage="Invoice deleted"
+      onConfirm={async () => {
+        await deleteInvoice(invoiceId);
+        router.push("/invoices");
       }}
-    >
-      {isPending ? "Deleting…" : "Delete"}
-    </Button>
+    />
   );
 }

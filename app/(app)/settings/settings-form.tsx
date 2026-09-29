@@ -5,6 +5,7 @@ import { Input, Label, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateOrgSettings } from "./actions";
 import { DEFAULT_REMINDER_MESSAGE } from "@/lib/whatsapp/templates";
+import { useActionToast } from "@/components/ui/toast";
 
 const initialState: { error: string | null } = { error: null };
 
@@ -18,6 +19,7 @@ export function SettingsForm({
   staleLeadDays: number;
 }) {
   const [state, formAction, pending] = useActionState(updateOrgSettings, initialState);
+  useActionToast(state, pending, "Settings saved");
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

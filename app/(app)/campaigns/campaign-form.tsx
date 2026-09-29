@@ -4,12 +4,14 @@ import { useActionState, useEffect, useRef } from "react";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { sendCampaign } from "./actions";
+import { useActionToast } from "@/components/ui/toast";
 
 const initialState: { error: string | null } = { error: null };
 
 export function CampaignForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, pending] = useActionState(sendCampaign, initialState);
+  useActionToast(state, pending, "Campaign sent");
 
   useEffect(() => {
     if (state.error === null && !pending) formRef.current?.reset();

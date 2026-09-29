@@ -4,6 +4,7 @@ import { notifications } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { NavLinks } from "./nav-links";
 import { SignOutButton } from "./sign-out-button";
+import { ToastProvider } from "@/components/ui/toast";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -39,7 +40,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col">{children}</div>
+      <div className="flex flex-1 flex-col">
+        <ToastProvider>{children}</ToastProvider>
+      </div>
     </div>
   );
 }

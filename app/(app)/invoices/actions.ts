@@ -108,7 +108,6 @@ export async function deleteInvoice(invoiceId: string) {
     .where(and(eq(invoices.id, invoiceId), eq(invoices.orgId, user.orgId), eq(invoices.status, "draft")));
 
   revalidatePath("/invoices");
-  redirect("/invoices");
 }
 
 const paymentSchema = z.object({

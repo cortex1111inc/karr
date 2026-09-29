@@ -117,7 +117,6 @@ export async function deleteQuotation(quotationId: string) {
     .where(and(eq(quotations.id, quotationId), eq(quotations.orgId, user.orgId), eq(quotations.status, "draft")));
 
   revalidatePath("/quotations");
-  redirect("/quotations");
 }
 
 export async function convertQuotationToInvoice(quotationId: string) {

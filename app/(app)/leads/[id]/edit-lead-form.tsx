@@ -6,6 +6,7 @@ import type { leads } from "@/db/schema";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateLead } from "../actions";
+import { useActionToast } from "@/components/ui/toast";
 
 type Lead = InferSelectModel<typeof leads>;
 
@@ -18,6 +19,7 @@ function toDateInputValue(date: Date | null) {
 
 export function EditLeadForm({ lead }: { lead: Lead }) {
   const [state, formAction, pending] = useActionState(updateLead.bind(null, lead.id), initialState);
+  useActionToast(state, pending, "Lead updated");
 
   return (
     <form action={formAction} className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">

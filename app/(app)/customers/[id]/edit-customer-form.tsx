@@ -6,6 +6,7 @@ import type { customers } from "@/db/schema";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateCustomer } from "../actions";
+import { useActionToast } from "@/components/ui/toast";
 
 type Customer = InferSelectModel<typeof customers>;
 
@@ -13,6 +14,7 @@ const initialState: { error: string | null } = { error: null };
 
 export function EditCustomerForm({ customer }: { customer: Customer }) {
   const [state, formAction, pending] = useActionState(updateCustomer.bind(null, customer.id), initialState);
+  useActionToast(state, pending, "Customer updated");
 
   return (
     <form action={formAction} className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">

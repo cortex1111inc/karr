@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { Select } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
 import { assignLead } from "../actions";
 
 export function AssigneeSelect({
@@ -14,6 +15,7 @@ export function AssigneeSelect({
   currentAssigneeId: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
+  const toast = useToast();
 
   return (
     <Select
@@ -22,8 +24,9 @@ export function AssigneeSelect({
       aria-label="Assigned staff member"
       onChange={(event) => {
         const value = event.target.value;
-        startTransition(() => {
-          assignLead(leadId, value);
+        startTransition(async () => {
+          await assignLead(leadId, value);
+          toast("Assignee updated");
         });
       }}
     >

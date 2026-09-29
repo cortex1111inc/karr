@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { Select } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
 import { assignVehicleToLead } from "../actions";
 
 export function VehicleSelect({
@@ -14,6 +15,7 @@ export function VehicleSelect({
   currentVehicleId: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
+  const toast = useToast();
 
   return (
     <Select
@@ -22,8 +24,9 @@ export function VehicleSelect({
       aria-label="Assigned vehicle"
       onChange={(event) => {
         const value = event.target.value;
-        startTransition(() => {
-          assignVehicleToLead(leadId, value);
+        startTransition(async () => {
+          await assignVehicleToLead(leadId, value);
+          toast("Vehicle updated");
         });
       }}
     >

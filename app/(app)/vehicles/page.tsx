@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
 import { vehicles } from "@/db/schema";
@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { NewVehicleDialog } from "./new-vehicle-dialog";
 import { VehicleStatusSelect } from "./vehicle-status-select";
+import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const STATUS_TONE: Record<string, "neutral" | "accent" | "danger"> = {
   available: "accent",
@@ -16,21 +18,27 @@ const STATUS_TONE: Record<string, "neutral" | "accent" | "danger"> = {
   retired: "neutral",
 };
 
-export default async function VehiclesPage() {
+export default async function VehiclesPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const user = await requireUser();
+  const page = parsePage((await searchParams).page);
 
-  const rows = await db
-    .select()
-    .from(vehicles)
-    .where(eq(vehicles.orgId, user.orgId))
-    .orderBy(asc(vehicles.registrationNumber));
+  const [rows, [{ total }]] = await Promise.all([
+    db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.orgId, user.orgId))
+      .orderBy(asc(vehicles.registrationNumber))
+      .limit(PAGE_SIZE)
+      .offset((page - 1) * PAGE_SIZE),
+    db.select({ total: count() }).from(vehicles).where(eq(vehicles.orgId, user.orgId)),
+  ]);
 
   return (
     <>
       <PageHeader title="Vehicles" description="Your rental fleet." action={<NewVehicleDialog />} />
       <div className="flex-1 px-8 py-6">
         {rows.length === 0 ? (
-          <Card className="p-10 text-center text-sm text-muted">No vehicles yet.</Card>
+          <EmptyState title="No vehicles yet" description="Add your rental fleet to track availability and link vehicles to bookings." />
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {rows.map((vehicle) => (
@@ -51,6 +59,7 @@ export default async function VehiclesPage() {
             ))}
           </div>
         )}
+        <Pagination page={page} total={total} pathname="/vehicles" />
       </div>
     </>
   );

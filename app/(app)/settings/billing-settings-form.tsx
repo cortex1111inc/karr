@@ -4,11 +4,13 @@ import { useActionState } from "react";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateBillingSettings } from "./actions";
+import { useActionToast } from "@/components/ui/toast";
 
 const initialState: { error: string | null } = { error: null };
 
 export function BillingSettingsForm({ defaultGstRate }: { defaultGstRate: number }) {
   const [state, formAction, pending] = useActionState(updateBillingSettings, initialState);
+  useActionToast(state, pending, "Billing defaults saved");
 
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">

@@ -1,22 +1,19 @@
 "use client";
 
-import { useTransition } from "react";
+import { ConfirmButton } from "@/components/ui/dialog";
 import { deletePayment } from "../actions";
 
 export function DeletePaymentButton({ paymentId, invoiceId }: { paymentId: string; invoiceId: string }) {
-  const [isPending, startTransition] = useTransition();
-
   return (
-    <button
-      type="button"
-      disabled={isPending}
-      onClick={() => {
-        if (!window.confirm("Remove this payment record?")) return;
-        startTransition(() => deletePayment(paymentId, invoiceId));
-      }}
-      className="text-xs text-faint transition-colors hover:text-danger disabled:opacity-50"
-    >
-      {isPending ? "Removing…" : "Remove"}
-    </button>
+    <ConfirmButton
+      label="Remove"
+      pendingLabel="Removing…"
+      variant="ghost"
+      title="Remove this payment?"
+      body="The invoice's paid amount and status are recalculated."
+      confirmLabel="Remove payment"
+      successMessage="Payment removed"
+      onConfirm={() => deletePayment(paymentId, invoiceId)}
+    />
   );
 }

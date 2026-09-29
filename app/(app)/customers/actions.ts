@@ -2,7 +2,6 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
@@ -63,5 +62,4 @@ export async function deleteCustomer(customerId: string) {
   await db.delete(customers).where(and(eq(customers.id, customerId), eq(customers.orgId, user.orgId)));
 
   revalidatePath("/customers");
-  redirect("/customers");
 }

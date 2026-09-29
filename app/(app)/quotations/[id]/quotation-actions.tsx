@@ -1,23 +1,31 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/toast";
 import { convertQuotationToInvoice, deleteQuotation, updateQuotationStatus } from "../actions";
 
 const STATUSES = ["draft", "sent", "accepted", "declined"] as const;
 
 export function QuotationStatusSelect({ quotationId, status }: { quotationId: string; status: string }) {
   const [isPending, startTransition] = useTransition();
+  const toast = useToast();
 
   return (
     <Select
       className="w-36"
       value={status}
       disabled={isPending}
+      aria-label="Quotation status"
       onChange={(e) => {
         const next = e.target.value as (typeof STATUSES)[number];
-        startTransition(() => updateQuotationStatus(quotationId, next));
+        startTransition(async () => {
+          await updateQuotationStatus(quotationId, next);
+          toast(`Marked ${next}`);
+        });
       }}
     >
       {STATUSES.map((s) => (
@@ -45,19 +53,20 @@ export function ConvertToInvoiceButton({ quotationId }: { quotationId: string })
 }
 
 export function DeleteQuotationButton({ quotationId }: { quotationId: string }) {
-  const [isPending, startTransition] = useTransition();
-
+  const router = useRouter();
   return (
-    <Button
+    <ConfirmButton
+      label="Delete draft"
+      pendingLabel="Deleting…"
       variant="ghost"
-      size="sm"
-      disabled={isPending}
-      onClick={() => {
-        if (!window.confirm("Delete this draft quotation?")) return;
-        startTransition(() => deleteQuotation(quotationId));
+      title="Delete this draft quotation?"
+      body="Only drafts can be deleted. The quotation number isn't reused."
+      confirmLabel="Delete"
+      successMessage="Quotation deleted"
+      onConfirm={async () => {
+        await deleteQuotation(quotationId);
+        router.push("/quotations");
       }}
-    >
-      {isPending ? "Deleting…" : "Delete"}
-    </Button>
+    />
   );
 }

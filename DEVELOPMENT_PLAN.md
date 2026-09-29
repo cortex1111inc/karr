@@ -134,13 +134,13 @@ No tests exist. Every later workstream should land with tests, so this comes ear
 
 ## WS3 — App-shell UX foundations
 
-- [ ] `app/(app)/loading.tsx` (skeleton matching the page header + card layout) and per-route `loading.tsx` for heavy pages (`/reports`, `/leads`).
-- [ ] `app/(app)/error.tsx` (client component, "Something went wrong" + retry via `reset()`), `app/global-error.tsx`, `app/not-found.tsx` (and styled 404 for public token pages — currently they call `notFound()` into the default Next page).
-- [ ] **Toast feedback** for mutations. Today most actions give no confirmation (e.g. "Save changes" just re-renders). Build a tiny `components/ui/toast.tsx` (context + portal, no dependency) or use `sonner` if a dependency is acceptable. Wire into: settings saves, lead edit, invite, record payment, stock movement, status changes.
-- [ ] **Replace `window.confirm`** (used in 8 delete/disconnect buttons) with a reusable `components/ui/confirm-dialog.tsx` built on the same native `<dialog>` pattern the app already uses.
-- [ ] **Pagination** for `/leads` (board: cap per column with "show more"), `/customers`, `/invoices`, `/quotations`, `/inventory`, `/notifications` (already `limit 50`), movement/payment history lists. Cursor or `?page=` with `limit/offset`; a shared `components/ui/pagination.tsx`.
-- [ ] **Consistent empty states** — one `components/ui/empty-state.tsx` (title, description, primary action) replacing the ad-hoc "No X yet" cards.
-- [ ] Extract the repeated native-`<dialog>` boilerplate (6 copies: `leads/new-lead-dialog`, `leads/[id]/convert-dialog`, `invoices/[id]/record-payment-dialog`, `vehicles/new-vehicle-dialog`, `inventory/new-stock-item-dialog`, `inventory/[id]/record-movement-dialog`) into `components/ui/dialog.tsx`.
+- [x] `app/(app)/loading.tsx` (skeleton matching the page header + card layout) and per-route `loading.tsx` for heavy pages (`/reports`, `/leads`).
+- [x] `app/(app)/error.tsx` (client component, "Something went wrong" + retry via `reset()`), `app/global-error.tsx`, `app/not-found.tsx` (and styled 404 for public token pages — currently they call `notFound()` into the default Next page).
+- [x] **Toast feedback** for mutations. *(`components/ui/toast.tsx`, no dependency; `useActionToast` for forms; wired into every create/update/delete/status action)* Today most actions give no confirmation (e.g. "Save changes" just re-renders). Build a tiny `components/ui/toast.tsx` (context + portal, no dependency) or use `sonner` if a dependency is acceptable. Wire into: settings saves, lead edit, invite, record payment, stock movement, status changes.
+- [x] **Replace `window.confirm`** (used in 8 delete/disconnect buttons) with a reusable `components/ui/confirm-dialog.tsx` built on the same native `<dialog>` pattern the app already uses.
+- [x] **Pagination** *(50/page with total count on customers, invoices, quotations, inventory, vehicles, notifications; leads board capped at 300 most recent with a notice)* for `/leads` (board: cap per column with "show more"), `/customers`, `/invoices`, `/quotations`, `/inventory`, `/notifications` (already `limit 50`), movement/payment history lists. Cursor or `?page=` with `limit/offset`; a shared `components/ui/pagination.tsx`.
+- [x] **Consistent empty states** — one `components/ui/empty-state.tsx` (title, description, primary action) replacing the ad-hoc "No X yet" cards.
+- [x] Extract the repeated native-`<dialog>` boilerplate *(into `FormDialog` in `components/ui/dialog.tsx`; full-screen sheet on mobile)* (6 copies: `leads/new-lead-dialog`, `leads/[id]/convert-dialog`, `invoices/[id]/record-payment-dialog`, `vehicles/new-vehicle-dialog`, `inventory/new-stock-item-dialog`, `inventory/[id]/record-movement-dialog`) into `components/ui/dialog.tsx`.
 
 **Acceptance:** throwing inside any `(app)` page shows the error boundary, not a blank page; every mutation shows a toast; no list renders more than one page of rows.
 

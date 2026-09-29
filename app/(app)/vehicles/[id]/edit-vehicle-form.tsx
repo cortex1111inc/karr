@@ -6,6 +6,7 @@ import type { vehicles } from "@/db/schema";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateVehicle } from "../actions";
+import { useActionToast } from "@/components/ui/toast";
 
 type Vehicle = InferSelectModel<typeof vehicles>;
 
@@ -13,6 +14,7 @@ const initialState: { error: string | null } = { error: null };
 
 export function EditVehicleForm({ vehicle }: { vehicle: Vehicle }) {
   const [state, formAction, pending] = useActionState(updateVehicle.bind(null, vehicle.id), initialState);
+  useActionToast(state, pending, "Vehicle updated");
 
   return (
     <form action={formAction} className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">

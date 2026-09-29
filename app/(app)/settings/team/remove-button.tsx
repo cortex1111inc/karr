@@ -1,25 +1,19 @@
 "use client";
 
-import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/ui/dialog";
 import { removeTeammate } from "./actions";
 
 export function RemoveButton({ profileId, fullName }: { profileId: string; fullName: string }) {
-  const [isPending, startTransition] = useTransition();
-
   return (
-    <Button
+    <ConfirmButton
+      label="Remove"
+      pendingLabel="Removing…"
       variant="ghost"
-      size="sm"
-      disabled={isPending}
-      onClick={() => {
-        if (!window.confirm(`Remove ${fullName} from the workspace?`)) return;
-        startTransition(() => {
-          removeTeammate(profileId);
-        });
-      }}
-    >
-      {isPending ? "Removing…" : "Remove"}
-    </Button>
+      title={`Remove ${fullName}?`}
+      body="They lose access to this workspace immediately. Leads assigned to them become unassigned."
+      confirmLabel="Remove"
+      successMessage={`${fullName} removed`}
+      onConfirm={() => removeTeammate(profileId)}
+    />
   );
 }

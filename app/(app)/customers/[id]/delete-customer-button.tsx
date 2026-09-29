@@ -1,25 +1,23 @@
 "use client";
 
-import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { ConfirmButton } from "@/components/ui/dialog";
 import { deleteCustomer } from "../actions";
 
 export function DeleteCustomerButton({ customerId, customerName }: { customerId: string; customerName: string }) {
-  const [isPending, startTransition] = useTransition();
-
+  const router = useRouter();
   return (
-    <Button
-      variant="danger"
-      size="sm"
-      disabled={isPending}
-      onClick={() => {
-        if (!window.confirm(`Delete ${customerName}? This can't be undone.`)) return;
-        startTransition(() => {
-          deleteCustomer(customerId);
-        });
+    <ConfirmButton
+      label="Delete customer"
+      pendingLabel="Deleting…"
+      title={`Delete ${customerName}?`}
+      body="Their profile is removed. Linked leads and invoices stay, but lose the link to this customer. This can't be undone."
+      confirmLabel="Delete"
+      successMessage="Customer deleted"
+      onConfirm={async () => {
+        await deleteCustomer(customerId);
+        router.push("/customers");
       }}
-    >
-      {isPending ? "Deleting…" : "Delete customer"}
-    </Button>
+    />
   );
 }

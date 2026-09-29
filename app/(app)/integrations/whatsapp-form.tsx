@@ -4,11 +4,13 @@ import { useActionState } from "react";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { saveWhatsAppIntegration } from "./actions";
+import { useActionToast } from "@/components/ui/toast";
 
 const initialState: { error: string | null } = { error: null };
 
 export function WhatsAppForm({ phoneNumberId, isConnected }: { phoneNumberId: string | null; isConnected: boolean }) {
   const [state, formAction, pending] = useActionState(saveWhatsAppIntegration, initialState);
+  useActionToast(state, pending, "WhatsApp connection saved");
 
   return (
     <form action={formAction} className="mt-4 flex flex-col gap-4">
