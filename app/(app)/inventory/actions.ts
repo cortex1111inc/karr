@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
 import { stockItems, stockMovementTypeEnum, stockMovements } from "@/db/schema";
-import { requireUser } from "@/lib/auth";
+import { requireOwner, requireUser } from "@/lib/auth";
 
 const stockItemSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -88,7 +88,7 @@ export async function updateStockItem(stockItemId: string, _prevState: { error: 
 }
 
 export async function deleteStockItem(stockItemId: string) {
-  const user = await requireUser();
+  const user = await requireOwner();
 
   await db.delete(stockItems).where(and(eq(stockItems.id, stockItemId), eq(stockItems.orgId, user.orgId)));
 

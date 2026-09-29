@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
 import { invoiceItems, invoices, paymentMethodEnum, payments } from "@/db/schema";
-import { requireUser } from "@/lib/auth";
+import { requireOwner, requireUser } from "@/lib/auth";
 import { calculateTotals } from "@/lib/billing/money";
 import { nextDocumentNumber } from "@/lib/billing/numbering";
 import { parseLineItems } from "@/lib/billing/schema";
@@ -100,7 +100,7 @@ export async function updateInvoiceStatus(invoiceId: string, status: "draft" | "
 }
 
 export async function deleteInvoice(invoiceId: string) {
-  const user = await requireUser();
+  const user = await requireOwner();
 
   await db
     .delete(invoices)
@@ -170,7 +170,7 @@ export async function recordPayment(invoiceId: string, _prevState: { error: stri
 }
 
 export async function deletePayment(paymentId: string, invoiceId: string) {
-  const user = await requireUser();
+  const user = await requireOwner();
 
   const [invoice] = await db
     .select()

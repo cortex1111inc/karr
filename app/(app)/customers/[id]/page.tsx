@@ -76,7 +76,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             ← Back to customers
           </Link>
         }
-        action={<DeleteCustomerButton customerId={customer.id} customerName={customer.fullName} />}
+        action={user.role === "owner" ? <DeleteCustomerButton customerId={customer.id} customerName={customer.fullName} /> : undefined}
       />
       <div className="flex-1 px-8 py-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">

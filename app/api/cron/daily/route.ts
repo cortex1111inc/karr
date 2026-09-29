@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { and, eq, isNotNull, isNull, lte, notInArray, or, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lt, lte, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { customers, leads, organizations, profiles, stockItems } from "@/db/schema";
+import { customers, leads, organizations, profiles, rateLimits, stockItems } from "@/db/schema";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { renderReminderMessage } from "@/lib/whatsapp/templates";
 import { notify } from "@/lib/notifications";
@@ -13,6 +13,17 @@ import { notify } from "@/lib/notifications";
 //   2. In-app "follow-up due" nudges for leads
 //   3. In-app "stale lead" nudges (no update in org.staleLeadDays days)
 //   4. In-app "low stock" nudges for the owner
+//   5. Pruning expired rate-limit windows
+//
+// Caps keep one run inside maxDuration. Service reminders call WhatsApp
+// (slow, external) but each row rolls its due date forward once handled, so
+// a small cap just defers the remainder to the next run. The notification
+// sections are DB-only and deduped rows stay selected, so they get a much
+// larger cap — a small one could re-pick the same rows every run.
+export const maxDuration = 60;
+const WHATSAPP_BATCH = 200;
+const NOTIFY_BATCH = 2000;
+
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (secret) {
@@ -65,7 +76,8 @@ export async function GET(request: NextRequest) {
         lte(customers.nextServiceDueAt, now),
         or(isNull(customers.lastReminderSentAt), lte(customers.lastReminderSentAt, customers.nextServiceDueAt)),
       ),
-    );
+    )
+    .limit(WHATSAPP_BATCH);
 
   for (const customer of dueForService) {
     const nextDue = new Date(now);
@@ -103,7 +115,8 @@ export async function GET(request: NextRequest) {
         lte(leads.followUpAt, endOfToday),
         notInArray(leads.stage, ["booked", "lost"]),
       ),
-    );
+    )
+    .limit(NOTIFY_BATCH);
 
   for (const lead of dueFollowUps) {
     const profileId = lead.assignedTo ?? (await resolveOwnerId(lead.orgId));
@@ -134,7 +147,8 @@ export async function GET(request: NextRequest) {
     })
     .from(leads)
     .innerJoin(organizations, eq(leads.orgId, organizations.id))
-    .where(notInArray(leads.stage, ["booked", "lost"]));
+    .where(notInArray(leads.stage, ["booked", "lost"]))
+    .limit(NOTIFY_BATCH);
 
   for (const lead of activeLeads) {
     const staleThreshold = new Date(now);
@@ -170,7 +184,8 @@ export async function GET(request: NextRequest) {
       unit: stockItems.unit,
     })
     .from(stockItems)
-    .where(sql`${stockItems.quantityOnHand} <= ${stockItems.lowStockThreshold}`);
+    .where(sql`${stockItems.quantityOnHand} <= ${stockItems.lowStockThreshold}`)
+    .limit(NOTIFY_BATCH);
 
   for (const item of lowStock) {
     const profileId = await resolveOwnerId(item.orgId);
@@ -189,6 +204,10 @@ export async function GET(request: NextRequest) {
     });
     results.lowStockNudges += 1;
   }
+
+  // 5. Prune rate-limit windows older than a day
+  const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  await db.delete(rateLimits).where(lt(rateLimits.windowStart, cutoff));
 
   return NextResponse.json(results);
 }

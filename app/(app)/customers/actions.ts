@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
-import { requireUser } from "@/lib/auth";
+import { requireOwner, requireUser } from "@/lib/auth";
 
 const updateCustomerSchema = z.object({
   fullName: z.string().trim().min(1, "Name is required"),
@@ -58,7 +58,7 @@ export async function updateCustomer(
 }
 
 export async function deleteCustomer(customerId: string) {
-  const user = await requireUser();
+  const user = await requireOwner();
 
   await db.delete(customers).where(and(eq(customers.id, customerId), eq(customers.orgId, user.orgId)));
 

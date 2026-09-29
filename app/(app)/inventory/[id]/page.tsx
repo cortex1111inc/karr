@@ -50,7 +50,7 @@ export default async function StockItemDetailPage({ params }: { params: Promise<
         action={
           <div className="flex items-center gap-2">
             <RecordMovementDialog stockItemId={item.id} unit={item.unit} />
-            <DeleteStockItemButton stockItemId={item.id} name={item.name} />
+            {user.role === "owner" ? <DeleteStockItemButton stockItemId={item.id} name={item.name} /> : null}
           </div>
         }
       />

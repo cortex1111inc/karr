@@ -143,7 +143,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                         <p className="text-xs text-faint">{payment.paidAt.toLocaleString()}</p>
                         {payment.notes ? <p className="mt-0.5 text-xs text-muted">{payment.notes}</p> : null}
                       </div>
-                      <DeletePaymentButton paymentId={payment.id} invoiceId={invoice.id} />
+                      {user.role === "owner" ? <DeletePaymentButton paymentId={payment.id} invoiceId={invoice.id} /> : null}
                     </div>
                   ))
                 )}
@@ -161,7 +161,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               </div>
             </Card>
 
-            {invoice.status === "draft" ? (
+            {invoice.status === "draft" && user.role === "owner" ? (
               <Card className="p-5">
                 <DeleteInvoiceButton invoiceId={invoice.id} />
               </Card>

@@ -6,6 +6,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { CampaignForm } from "./campaign-form";
 
+// Server actions invoked from this page (sendCampaign) inherit this limit.
+export const maxDuration = 60;
+
 export default async function CampaignsPage() {
   const user = await requireUser();
 

@@ -41,3 +41,13 @@ export async function requireUser(): Promise<CurrentUser> {
     orgId: profile.orgId,
   };
 }
+
+// For destructive actions on financial/customer/asset records. The UI hides
+// these controls from staff too; this is the server-side enforcement.
+export async function requireOwner(): Promise<CurrentUser> {
+  const user = await requireUser();
+  if (user.role !== "owner") {
+    throw new Error("Only the workspace owner can do that.");
+  }
+  return user;
+}

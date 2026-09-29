@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
 import { vehicleStatusEnum, vehicles } from "@/db/schema";
-import { requireUser } from "@/lib/auth";
+import { requireOwner, requireUser } from "@/lib/auth";
 
 const vehicleSchema = z.object({
   registrationNumber: z.string().trim().min(1, "Registration number is required"),
@@ -101,7 +101,7 @@ export async function updateVehicleStatus(vehicleId: string, status: (typeof veh
 }
 
 export async function deleteVehicle(vehicleId: string) {
-  const user = await requireUser();
+  const user = await requireOwner();
 
   await db.delete(vehicles).where(and(eq(vehicles.id, vehicleId), eq(vehicles.orgId, user.orgId)));
 

@@ -9,6 +9,7 @@ import {
   pgEnum,
   index,
   uniqueIndex,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -541,3 +542,17 @@ export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
   stockItem: one(stockItems, { fields: [stockMovements.stockItemId], references: [stockItems.id] }),
   author: one(profiles, { fields: [stockMovements.createdBy], references: [profiles.id] }),
 }));
+
+// ===== Abuse protection =====
+// Fixed-window counters for public, unauthenticated endpoints (booking form,
+// quotation acceptance). Postgres-backed because serverless instances don't
+// share memory. Rows older than a day are pruned by the daily cron.
+export const rateLimits = pgTable(
+  "rate_limits",
+  {
+    key: text("key").notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.key, table.windowStart] })],
+);

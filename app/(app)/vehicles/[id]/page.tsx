@@ -47,7 +47,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
             ← Back to vehicles
           </Link>
         }
-        action={<DeleteVehicleButton vehicleId={vehicle.id} registrationNumber={vehicle.registrationNumber} />}
+        action={user.role === "owner" ? <DeleteVehicleButton vehicleId={vehicle.id} registrationNumber={vehicle.registrationNumber} /> : undefined}
       />
       <div className="flex-1 px-8 py-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
