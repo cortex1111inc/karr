@@ -4,8 +4,9 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { stockItems, stockMovementTypeEnum, stockMovements } from "@/db/schema";
+import { stockItems, stockMovementTypeEnum } from "@/db/schema";
 import { requireOwner, requireUser } from "@/lib/auth";
+import { applyStockMovement } from "@/lib/inventory/stock";
 
 const stockItemSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -124,43 +125,15 @@ export async function recordStockMovement(
     return { error: parsed.error.issues[0]?.message ?? "Check the form and try again." };
   }
 
-  const [item] = await db
-    .select({ quantityOnHand: stockItems.quantityOnHand })
-    .from(stockItems)
-    .where(and(eq(stockItems.id, stockItemId), eq(stockItems.orgId, user.orgId)))
-    .limit(1);
-
-  if (!item) {
-    return { error: "Item not found." };
-  }
-
-  // restock adds, usage subtracts, adjustment can go either way — the form
-  // collects a signed "adjustment" quantity directly for that case.
-  const signedQuantity =
-    parsed.data.type === "usage"
-      ? -Math.abs(parsed.data.quantity)
-      : parsed.data.type === "restock"
-        ? Math.abs(parsed.data.quantity)
-        : parsed.data.quantity;
-
-  const nextQuantity = item.quantityOnHand + signedQuantity;
-  if (nextQuantity < 0) {
-    return { error: `Not enough stock — only ${item.quantityOnHand} on hand.` };
-  }
-
-  await db.insert(stockMovements).values({
+  const result = await applyStockMovement({
     orgId: user.orgId,
     stockItemId,
     type: parsed.data.type,
-    quantity: signedQuantity,
+    quantity: parsed.data.quantity,
     note: parsed.data.note,
     createdBy: user.id,
   });
-
-  await db
-    .update(stockItems)
-    .set({ quantityOnHand: nextQuantity, updatedAt: new Date() })
-    .where(eq(stockItems.id, stockItemId));
+  if (!result.ok) return { error: result.error };
 
   revalidatePath(`/inventory/${stockItemId}`);
   revalidatePath("/inventory");

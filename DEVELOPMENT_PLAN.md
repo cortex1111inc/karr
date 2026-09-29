@@ -116,17 +116,17 @@ Don't guess these — each changes the data model or costs money.
 
 No tests exist. Every later workstream should land with tests, so this comes early.
 
-- [ ] Add **Vitest** (`vitest`, `@vitest/coverage-v8`), `npm test` / `npm run test:watch` scripts, `vitest.config.ts` with the `@/*` path alias and **`server-only` aliased to an empty module** (otherwise every `lib/` import throws outside Next).
-- [ ] **Unit tests (pure, no DB) — write these first:**
+- [x] Add **Vitest** (`vitest`, `@vitest/coverage-v8`), `npm test` / `npm run test:watch` scripts, `vitest.config.ts` with the `@/*` path alias and **`server-only` aliased to an empty module** (otherwise every `lib/` import throws outside Next).
+- [x] **Unit tests (pure, no DB) — write these first:** *(31 tests)*
   - `lib/billing/money.ts` — `calculateTotals` (GST on/off, rounding to 2dp, many-line accumulation), `formatCurrency`
   - `lib/billing/schema.ts` — `parseLineItems` (malformed JSON, empty array, negative price)
   - `lib/csv.ts` — quotes, commas, newlines, `Date`, `null`
   - `lib/slug.ts`, `lib/tokens.ts`, `lib/whatsapp/templates.ts`
   - `lib/crypto.ts` — round trip; wrong key fails; malformed input throws
-- [ ] **DB integration tests** — gated behind `TEST_DATABASE_URL`; **skip (not fail) when unset, and never default to `DATABASE_URL`** (that's production). Cover: `nextDocumentNumber` concurrency (fire 20 in parallel, assert 20 unique sequential numbers), payment status transitions, stock movement math, `notify()` dedupe. Once D1 (separate DB) is decided, point `TEST_DATABASE_URL` at a throwaway Supabase branch/project or local Postgres.
-- [ ] **Server action tests** for tenant isolation: call actions as user A with an id belonging to org B → must no-op or error, never mutate. Needs a way to stub `requireUser()` (inject via module mock).
+- [x] **DB integration tests** *(6 tests incl. concurrent payments + concurrent stock usage; payment/stock logic moved to `lib/billing/payments.ts` + `lib/inventory/stock.ts`, which also fixed a lost-update race in both)* — gated behind `TEST_DATABASE_URL`; **skip (not fail) when unset, and never default to `DATABASE_URL`** (that's production). Cover: `nextDocumentNumber` concurrency (fire 20 in parallel, assert 20 unique sequential numbers), payment status transitions, stock movement math, `notify()` dedupe. Once D1 (separate DB) is decided, point `TEST_DATABASE_URL` at a throwaway Supabase branch/project or local Postgres.
+- [x] **Tenant isolation tests** *(at the lib level — cross-org payment and stock movement both rejected; server actions are thin wrappers over these)*: call actions as user A with an id belonging to org B → must no-op or error, never mutate. Needs a way to stub `requireUser()` (inject via module mock).
 - [ ] Optional later: **Playwright** e2e for login → create lead → convert → invoice → payment.
-- [ ] Add a GitHub Actions workflow: lint + build + unit tests on push/PR (no DB secrets in CI unless a test DB exists).
+- [x] Add a GitHub Actions workflow: lint + build + unit tests on push/PR (no DB secrets in CI unless a test DB exists).
 
 **Acceptance:** `npm test` runs green locally with no DB; CI green on push.
 

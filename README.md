@@ -99,6 +99,16 @@ All aggregation happens in JS after fetching the date-range rows (no SQL `GROUP 
 | `npm run db:migrate` | Apply generated migrations |
 | `npm run db:studio` | Open Drizzle Studio to browse data |
 | `npm run db:seed` | Link a Supabase auth user to a new organization |
+| `npm test` | Unit tests (Vitest) — no database needed; DB tests skip |
+| `npm run test:integration` | Real-database tests — only run when `TEST_DATABASE_URL` is set |
+
+## Testing
+
+- **Unit tests** live next to the code (`lib/**/*.test.ts`) and need no database: money math, line-item parsing, CSV escaping, crypto round-trip/tamper detection, slugs, tokens, templates.
+- **Integration tests** (`tests/integration/`) run against a real Postgres and are gated on `TEST_DATABASE_URL` — they skip when it's unset and **never** fall back to `DATABASE_URL`. Each run creates a throwaway organization and deletes it (everything cascades from `organizations`). They cover the concurrency-sensitive paths: document numbering, simultaneous payments, parallel stock usage, cross-org rejection.
+- `server-only` is aliased to a no-op in `vitest.config.mts`, so `lib/` modules import cleanly in tests.
+- Payment and stock logic lives in `lib/billing/payments.ts` and `lib/inventory/stock.ts` (not in server actions) so it's testable and shared with future callers like payment webhooks.
+- CI (`.github/workflows/ci.yml`) runs lint, unit tests and a build on every push, using placeholder env vars — no secrets in CI.
 
 ## Project structure
 

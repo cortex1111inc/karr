@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { invoiceItems, invoices, paymentMethodEnum, payments } from "@/db/schema";
+import { invoiceItems, invoices, paymentMethodEnum } from "@/db/schema";
 import { requireOwner, requireUser } from "@/lib/auth";
+import { applyPayment, removePayment } from "@/lib/billing/payments";
 import { calculateTotals } from "@/lib/billing/money";
 import { nextDocumentNumber } from "@/lib/billing/numbering";
 import { parseLineItems } from "@/lib/billing/schema";
@@ -133,36 +134,15 @@ export async function recordPayment(invoiceId: string, _prevState: { error: stri
     return { error: parsed.error.issues[0]?.message ?? "Check the form and try again." };
   }
 
-  const [invoice] = await db
-    .select()
-    .from(invoices)
-    .where(and(eq(invoices.id, invoiceId), eq(invoices.orgId, user.orgId)))
-    .limit(1);
-
-  if (!invoice) {
-    return { error: "Invoice not found." };
-  }
-  if (invoice.status === "void") {
-    return { error: "This invoice is void — payments can't be recorded against it." };
-  }
-
-  await db.insert(payments).values({
+  const result = await applyPayment({
     orgId: user.orgId,
     invoiceId,
-    amount: parsed.data.amount.toString(),
+    amount: parsed.data.amount,
     method: parsed.data.method,
     notes: parsed.data.notes,
     recordedBy: user.id,
   });
-
-  const newAmountPaid = Number(invoice.amountPaid) + parsed.data.amount;
-  const total = Number(invoice.total);
-  const nextStatus = newAmountPaid >= total ? "paid" : newAmountPaid > 0 ? "partial" : invoice.status;
-
-  await db
-    .update(invoices)
-    .set({ amountPaid: newAmountPaid.toString(), status: nextStatus, updatedAt: new Date() })
-    .where(eq(invoices.id, invoiceId));
+  if (!result.ok) return { error: result.error };
 
   revalidatePath(`/invoices/${invoiceId}`);
   revalidatePath("/invoices");
@@ -172,31 +152,7 @@ export async function recordPayment(invoiceId: string, _prevState: { error: stri
 export async function deletePayment(paymentId: string, invoiceId: string) {
   const user = await requireOwner();
 
-  const [invoice] = await db
-    .select()
-    .from(invoices)
-    .where(and(eq(invoices.id, invoiceId), eq(invoices.orgId, user.orgId)))
-    .limit(1);
-  if (!invoice) return;
-
-  const [payment] = await db
-    .select({ amount: payments.amount })
-    .from(payments)
-    .where(and(eq(payments.id, paymentId), eq(payments.invoiceId, invoiceId)))
-    .limit(1);
-  if (!payment) return;
-
-  await db.delete(payments).where(eq(payments.id, paymentId));
-
-  const newAmountPaid = Math.max(0, Number(invoice.amountPaid) - Number(payment.amount));
-  const total = Number(invoice.total);
-  const nextStatus =
-    newAmountPaid >= total ? "paid" : newAmountPaid > 0 ? "partial" : invoice.status === "paid" || invoice.status === "partial" ? "sent" : invoice.status;
-
-  await db
-    .update(invoices)
-    .set({ amountPaid: newAmountPaid.toString(), status: nextStatus, updatedAt: new Date() })
-    .where(eq(invoices.id, invoiceId));
+  if (!(await removePayment(user.orgId, invoiceId, paymentId))) return;
 
   revalidatePath(`/invoices/${invoiceId}`);
   revalidatePath("/invoices");

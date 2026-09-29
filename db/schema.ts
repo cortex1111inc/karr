@@ -11,7 +11,7 @@ import {
   uniqueIndex,
   primaryKey,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // Every table (except organizations) carries orgId — this is a multi-tenant
 // app where one row = one rental/service business. All queries must filter
@@ -425,10 +425,16 @@ export const payments = pgTable(
     method: paymentMethodEnum("method").notNull().default("cash"),
     notes: text("notes"),
     recordedBy: uuid("recorded_by").references(() => profiles.id, { onDelete: "set null" }),
+    // Set for payments received through a gateway webhook; unique so a
+    // redelivered webhook can't record the same payment twice.
+    providerPaymentId: text("provider_payment_id"),
     paidAt: timestamp("paid_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("payments_invoice_idx").on(table.invoiceId)],
+  (table) => [
+    index("payments_invoice_idx").on(table.invoiceId),
+    uniqueIndex("payments_provider_payment_id_idx").on(table.providerPaymentId).where(sql`${table.providerPaymentId} IS NOT NULL`),
+  ],
 );
 
 export const quotationsRelations = relations(quotations, ({ one, many }) => ({
