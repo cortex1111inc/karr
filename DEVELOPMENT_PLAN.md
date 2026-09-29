@@ -262,7 +262,7 @@ ALTER TABLE org_sites ENABLE ROW LEVEL SECURITY;
 ## WS7 — Automation completion
 
 - [x] **Lead stage history** (needed for accurate funnels in WS10 and for automations): `lead_stage_changes (id, org_id, lead_id, from_stage, to_stage, changed_by, changed_at)` + RLS; write it from `updateLeadStage`, `convertLeadToCustomer`, and anywhere else stage changes. Backfill not possible for past changes — note that in reports.
-- [ ] **Vehicle status automation** *(booked → rented done in WS7; auto-return waits on WS9.4 dates)*: when a lead with a `vehicleId` moves to `booked`, set the vehicle `rented`; when the rental ends (WS9.4 dates) the daily cron sets it back to `available`. Today status is purely manual.
+- [x] **Vehicle status automation** *(booked → rented in WS7; auto-return via cron in WS9)*: when a lead with a `vehicleId` moves to `booked`, set the vehicle `rented`; when the rental ends (WS9.4 dates) the daily cron sets it back to `available`. Today status is purely manual.
 - [x] **Auto-nudge escalation**: stale leads (Phase 3) escalate to the owner if still stale after 2× `staleLeadDays`.
 - [x] **Unpaid invoice reminders**: daily cron flags invoices `sent`/`partial` older than N days (new org setting `invoiceReminderDays`); in-app notification to owner + optional WhatsApp/email to the customer with the `/invoice/[token]` link (and the WS8.4 pay link).
 - [x] **Notification preferences** per profile: which kinds they get, and via which channel (in-app always; email/WhatsApp optional once WS8 lands).
@@ -305,12 +305,12 @@ Keep the established pattern (`README.md` → Integrations): typed provider inte
 
 ## WS9 — Billing & inventory enhancements
 
-- [ ] **9.1 Org billing profile + GST compliance (D4)**: legal name, GSTIN, address, state, logo URL, invoice terms/footer on `organizations` (or `org_billing_profiles`). Optional per-line HSN/SAC code; CGST+SGST vs IGST split based on place of supply. Show on public quote/invoice pages. Confirm the required format with the user's accountant before building the split.
-- [ ] **9.2 PDF / print**: low-cost first — a print stylesheet on `/quote/[token]` and `/invoice/[token]` plus a "Download PDF" button using `window.print()`. Server-generated PDF (for email attachments) only if WS8.2 needs it; evaluate a library then.
-- [ ] **9.3 Stock-linked line items (D5)**: line items optionally reference `stock_item_id` (new nullable column on `invoice_items`/`quotation_items`); the line-item editor gets a "pick from inventory" option that fills description/price. On invoice create (per D5), write a `usage` stock movement per linked line via the existing `recordStockMovement` logic (refactor it into `lib/inventory/` so it's callable outside the action); reverse on void/delete.
-- [ ] **9.4 Rental date ranges & vehicle availability**: `rental_start`/`rental_end` on leads (or a `bookings` table if a lead can span several vehicles — ask); conflict check when assigning a vehicle; `/vehicles/calendar` week view; per-day rate × days pre-fills the quotation.
-- [ ] **9.5 Quotation acceptance by the customer**: "Accept" / "Request changes" buttons on `/quote/[token]` → status `accepted` + owner notification. Public mutation keyed on the token only; rate-limit it.
-- [ ] **9.6 Credit notes / refunds** (partial reversal of a paid invoice) — ask whether needed before building.
+- [x] **9.1 Org billing profile + GST compliance (D4)**: legal name, GSTIN, address, state, logo URL, invoice terms/footer on `organizations` (or `org_billing_profiles`). Optional per-line HSN/SAC code; CGST+SGST vs IGST split based on place of supply. Show on public quote/invoice pages. Confirm the required format with the user's accountant before building the split.
+- [x] **9.2 PDF / print**: low-cost first — a print stylesheet on `/quote/[token]` and `/invoice/[token]` plus a "Download PDF" button using `window.print()`. Server-generated PDF (for email attachments) only if WS8.2 needs it; evaluate a library then.
+- [x] **9.3 Stock-linked line items (D5)**: line items optionally reference `stock_item_id` (new nullable column on `invoice_items`/`quotation_items`); the line-item editor gets a "pick from inventory" option that fills description/price. On invoice create (per D5), write a `usage` stock movement per linked line via the existing `recordStockMovement` logic (refactor it into `lib/inventory/` so it's callable outside the action); reverse on void/delete.
+- [x] **9.4 Rental date ranges & vehicle availability**: `rental_start`/`rental_end` on leads (or a `bookings` table if a lead can span several vehicles — ask); conflict check when assigning a vehicle; `/vehicles/calendar` week view; per-day rate × days pre-fills the quotation.
+- [x] **9.5 Quotation acceptance by the customer**: "Accept" / "Request changes" buttons on `/quote/[token]` → status `accepted` + owner notification. Public mutation keyed on the token only; rate-limit it.
+- [ ] *(deferred — needs your go-ahead)* **9.6 Credit notes / refunds** (partial reversal of a paid invoice) — ask whether needed before building.
 
 ---
 

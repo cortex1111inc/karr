@@ -5,14 +5,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { invoiceItems, invoices, paymentMethodEnum } from "@/db/schema";
+import { invoices, paymentMethodEnum } from "@/db/schema";
 import { requireOwner, requireUser } from "@/lib/auth";
-import { applyPayment, removePayment } from "@/lib/billing/payments";
+import { readGstFields } from "@/lib/billing/gst-fields";
+import { createInvoiceRecord, moveInvoiceStock } from "@/lib/billing/invoices";
+import { applyPayment, removePayment, syncInvoicePaymentStatus } from "@/lib/billing/payments";
 import { ownedCustomerId } from "@/lib/org-refs";
-import { calculateTotals } from "@/lib/billing/money";
-import { nextDocumentNumber } from "@/lib/billing/numbering";
 import { parseLineItems } from "@/lib/billing/schema";
-import { generatePublicToken } from "@/lib/tokens";
 
 const invoiceSchema = z.object({
   contactName: z.string().trim().min(1, "Name is required"),
@@ -52,64 +51,77 @@ export async function createInvoice(_prevState: { error: string | null }, formDa
     return { error: items.error };
   }
 
-  const totals = calculateTotals(items.data, parsed.data.gstEnabled, parsed.data.gstRate);
+  const gst = await readGstFields(user.orgId, formData);
+  if ("error" in gst) return { error: gst.error };
+
   const customerId = await ownedCustomerId(user.orgId, parsed.data.customerId);
-  const number = await nextDocumentNumber(user.orgId, "invoice");
-
-  const [invoice] = await db
-    .insert(invoices)
-    .values({
-      orgId: user.orgId,
-      customerId,
-      number,
-      contactName: parsed.data.contactName,
-      contactPhone: parsed.data.contactPhone,
-      notes: parsed.data.notes,
-      gstEnabled: parsed.data.gstEnabled,
-      gstRate: parsed.data.gstEnabled ? parsed.data.gstRate : 0,
-      subtotal: totals.subtotal.toString(),
-      taxAmount: totals.taxAmount.toString(),
-      total: totals.total.toString(),
-      publicToken: generatePublicToken(),
-      createdBy: user.id,
-    })
-    .returning({ id: invoices.id });
-
-  await db.insert(invoiceItems).values(
-    items.data.map((item, index) => ({
-      invoiceId: invoice.id,
-      description: item.description,
-      quantity: item.quantity.toString(),
-      unitPrice: item.unitPrice.toString(),
-      amount: (item.quantity * item.unitPrice).toString(),
-      sortOrder: index,
-    })),
-  );
+  const result = await createInvoiceRecord({
+    orgId: user.orgId,
+    createdBy: user.id,
+    header: { ...parsed.data, ...gst, customerId },
+    items: items.data,
+  });
+  if (!result.ok) return { error: result.error };
 
   revalidatePath("/invoices");
-  redirect(`/invoices/${invoice.id}`);
+  revalidatePath("/inventory");
+  redirect(`/invoices/${result.id}`);
 }
 
-export async function updateInvoiceStatus(invoiceId: string, status: "draft" | "sent" | "void") {
+// Voiding returns stock-linked lines to inventory; un-voiding takes them
+// again (and fails if there's no longer enough).
+export async function updateInvoiceStatus(invoiceId: string, status: "draft" | "sent" | "void"): Promise<{ error: string | null }> {
   const user = await requireUser();
+
+  const [invoice] = await db
+    .select({ status: invoices.status })
+    .from(invoices)
+    .where(and(eq(invoices.id, invoiceId), eq(invoices.orgId, user.orgId)))
+    .limit(1);
+  if (!invoice) return { error: "Invoice not found." };
+  if (invoice.status === status) return { error: null };
+
+  const leavingVoid = invoice.status === "void";
+  if (status === "void" || leavingVoid) {
+    const moved = await moveInvoiceStock({
+      orgId: user.orgId,
+      invoiceId,
+      direction: status === "void" ? "return" : "take",
+      createdBy: user.id,
+    });
+    if (!moved.ok) return { error: moved.error };
+  }
 
   await db
     .update(invoices)
     .set({ status, updatedAt: new Date() })
     .where(and(eq(invoices.id, invoiceId), eq(invoices.orgId, user.orgId)));
+  // Un-voiding an invoice that had payments: re-derive partial/paid.
+  if (leavingVoid) await syncInvoicePaymentStatus(invoiceId);
 
   revalidatePath(`/invoices/${invoiceId}`);
   revalidatePath("/invoices");
+  revalidatePath("/inventory");
+  return { error: null };
 }
 
 export async function deleteInvoice(invoiceId: string) {
   const user = await requireOwner();
 
+  const [invoice] = await db
+    .select({ status: invoices.status })
+    .from(invoices)
+    .where(and(eq(invoices.id, invoiceId), eq(invoices.orgId, user.orgId)))
+    .limit(1);
+  if (invoice?.status !== "draft") return;
+
+  await moveInvoiceStock({ orgId: user.orgId, invoiceId, direction: "return", createdBy: user.id });
   await db
     .delete(invoices)
     .where(and(eq(invoices.id, invoiceId), eq(invoices.orgId, user.orgId), eq(invoices.status, "draft")));
 
   revalidatePath("/invoices");
+  revalidatePath("/inventory");
 }
 
 const paymentSchema = z.object({

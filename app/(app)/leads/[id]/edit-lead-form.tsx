@@ -52,6 +52,14 @@ export function EditLeadForm({ lead, links = [] }: { lead: Lead; links?: LinkOpt
         <Label htmlFor="followUpAt">Follow up on</Label>
         <Input id="followUpAt" name="followUpAt" type="date" defaultValue={toDateInputValue(lead.followUpAt)} />
       </div>
+      <div>
+        <Label htmlFor="rentalStart">Rental from (optional)</Label>
+        <Input id="rentalStart" name="rentalStart" type="date" defaultValue={lead.rentalStart ?? ""} />
+      </div>
+      <div>
+        <Label htmlFor="rentalEnd">Rental until</Label>
+        <Input id="rentalEnd" name="rentalEnd" type="date" defaultValue={lead.rentalEnd ?? ""} />
+      </div>
       {links.length > 0 ? (
         <div className="sm:col-span-2">
           <TrackingLinkSelect links={links} defaultValue={lead.trackingLinkId} />

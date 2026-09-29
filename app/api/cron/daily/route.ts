@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { customers, invoices, leads, organizations, profiles, rateLimits, stockItems } from "@/db/schema";
 import { formatCurrency } from "@/lib/billing/money";
 import { getSiteUrl } from "@/lib/site";
+import { returnFinishedRentals } from "@/lib/rentals";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { renderReminderMessage } from "@/lib/whatsapp/templates";
 import { notify } from "@/lib/notifications";
@@ -17,7 +18,8 @@ import { notify } from "@/lib/notifications";
 //      escalated to the owner at 2x that
 //   4. In-app "low stock" nudges for the owner
 //   5. Unpaid-invoice reminders (owner in-app + optional customer WhatsApp)
-//   6. Pruning expired rate-limit windows
+//   6. Returning vehicles to available once their rentals have ended
+//   7. Pruning expired rate-limit windows
 //
 // Caps keep one run inside maxDuration. Service reminders call WhatsApp
 // (slow, external) but each row rolls its due date forward once handled, so
@@ -49,6 +51,7 @@ export async function GET(request: NextRequest) {
     staleLeadEscalations: 0,
     invoiceReminders: 0,
     invoiceWhatsApps: 0,
+    vehiclesReturned: 0,
   };
 
   // Cache each org's owner profile (fallback notification target for
@@ -306,7 +309,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 6. Prune rate-limit windows older than a day
+  // 6. Vehicles whose rentals have all ended go back to available
+  results.vehiclesReturned = await returnFinishedRentals();
+
+  // 7. Prune rate-limit windows older than a day
   const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   await db.delete(rateLimits).where(lt(rateLimits.windowStart, cutoff));
 

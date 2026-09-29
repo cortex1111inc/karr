@@ -108,7 +108,9 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 </div>
                 {invoice.gstEnabled ? (
                   <div className="flex justify-between">
-                    <dt className="text-muted">GST ({invoice.gstRate}%)</dt>
+                    <dt className="text-muted">
+                      {invoice.interState ? "IGST" : "CGST+SGST"} ({invoice.gstRate}%)
+                    </dt>
                     <dd className="font-mono tabular-nums">{formatCurrency(invoice.taxAmount)}</dd>
                   </div>
                 ) : null}

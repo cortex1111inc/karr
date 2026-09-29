@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { LineItemsEditor } from "@/components/billing/line-items-editor";
+import { LineItemsEditor, type StockOption } from "@/components/billing/line-items-editor";
 import { createInvoice } from "../actions";
 
 const initialState: { error: string | null } = { error: null };
@@ -13,11 +13,15 @@ export function InvoiceForm({
   defaultContactPhone,
   customerId,
   defaultGstRate,
+  orgStateCode,
+  stockOptions,
 }: {
   defaultContactName?: string;
   defaultContactPhone?: string;
   customerId?: string;
   defaultGstRate: number;
+  orgStateCode: string | null;
+  stockOptions: StockOption[];
 }) {
   const [state, formAction, pending] = useActionState(createInvoice, initialState);
 
@@ -36,7 +40,15 @@ export function InvoiceForm({
         </div>
       </div>
 
-      <LineItemsEditor defaultGstEnabled={false} defaultGstRate={defaultGstRate} />
+      <LineItemsEditor
+        defaultGstEnabled={false}
+        defaultGstRate={defaultGstRate}
+        orgStateCode={orgStateCode}
+        stockOptions={stockOptions}
+      />
+      {stockOptions.length > 0 ? (
+        <p className="-mt-2 text-xs text-faint">Lines linked to stock are deducted from inventory when you create the invoice.</p>
+      ) : null}
 
       <div>
         <Label htmlFor="notes">Notes (optional)</Label>

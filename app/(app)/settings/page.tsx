@@ -49,10 +49,22 @@ export default async function SettingsPage() {
           </Card>
 
           <Card className="p-5">
-            <h2 className="font-display text-sm font-bold">Billing defaults</h2>
-            <p className="mt-0.5 text-sm text-muted">Pre-fills GST on new quotations and invoices — still editable per document.</p>
+            <h2 className="font-display text-sm font-bold">Billing profile</h2>
+            <p className="mt-0.5 text-sm text-muted">
+              Printed on every quote and invoice. All optional — fill in GSTIN and state if you&apos;re GST-registered.
+            </p>
             <div className="mt-4">
-              <BillingSettingsForm defaultGstRate={org.defaultGstRate} />
+              <BillingSettingsForm
+                profile={{
+                  defaultGstRate: org.defaultGstRate,
+                  legalName: org.legalName,
+                  gstin: org.gstin,
+                  billingAddress: org.billingAddress,
+                  stateCode: org.stateCode,
+                  logoUrl: org.logoUrl,
+                  invoiceTerms: org.invoiceTerms,
+                }}
+              />
             </div>
           </Card>
 

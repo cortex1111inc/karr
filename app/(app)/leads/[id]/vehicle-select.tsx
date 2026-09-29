@@ -23,10 +23,16 @@ export function VehicleSelect({
       defaultValue={currentVehicleId ?? "none"}
       aria-label="Assigned vehicle"
       onChange={(event) => {
-        const value = event.target.value;
+        const select = event.target;
+        const value = select.value;
         startTransition(async () => {
-          await assignVehicleToLead(leadId, value);
-          toast("Vehicle updated");
+          const res = await assignVehicleToLead(leadId, value);
+          if (res.error) {
+            select.value = currentVehicleId ?? "none";
+            toast(res.error, "error");
+          } else {
+            toast("Vehicle updated");
+          }
         });
       }}
     >

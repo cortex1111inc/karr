@@ -39,13 +39,19 @@ export function QuotationStatusSelect({ quotationId, status }: { quotationId: st
 
 export function ConvertToInvoiceButton({ quotationId }: { quotationId: string }) {
   const [isPending, startTransition] = useTransition();
+  const toast = useToast();
 
   return (
     <Button
       variant="accent"
       size="sm"
       disabled={isPending}
-      onClick={() => startTransition(() => convertQuotationToInvoice(quotationId))}
+      onClick={() =>
+        startTransition(async () => {
+          const res = await convertQuotationToInvoice(quotationId);
+          if (res?.error) toast(res.error, "error");
+        })
+      }
     >
       {isPending ? "Converting…" : "Convert to invoice"}
     </Button>

@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { customers, organizations } from "@/db/schema";
+import { customers } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { billingFormContext } from "@/lib/billing/form-context";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { InvoiceForm } from "./invoice-form";
@@ -27,11 +28,7 @@ export default async function NewInvoicePage({
     defaultContactPhone = customer?.phone;
   }
 
-  const [org] = await db
-    .select({ defaultGstRate: organizations.defaultGstRate })
-    .from(organizations)
-    .where(eq(organizations.id, user.orgId))
-    .limit(1);
+  const context = await billingFormContext(user.orgId);
 
   return (
     <>
@@ -42,7 +39,9 @@ export default async function NewInvoicePage({
             defaultContactName={defaultContactName}
             defaultContactPhone={defaultContactPhone}
             customerId={customerId}
-            defaultGstRate={org?.defaultGstRate ?? 18}
+            defaultGstRate={context.defaultGstRate}
+            orgStateCode={context.orgStateCode}
+            stockOptions={context.stockOptions}
           />
         </Card>
       </div>

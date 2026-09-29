@@ -4,7 +4,10 @@ import { parseLineItems } from "./schema";
 describe("parseLineItems", () => {
   it("parses a valid JSON array", () => {
     const result = parseLineItems(JSON.stringify([{ description: "Oil change", quantity: "2", unitPrice: "450" }]));
-    expect(result).toEqual({ success: true, data: [{ description: "Oil change", quantity: 2, unitPrice: 450 }] });
+    expect(result).toEqual({
+      success: true,
+      data: [{ description: "Oil change", quantity: 2, unitPrice: 450, hsnSac: null, stockItemId: null }],
+    });
   });
 
   it.each([

@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { customers, leads, organizations } from "@/db/schema";
+import { customers, leads } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { billingFormContext, rentalLineForLead } from "@/lib/billing/form-context";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { QuotationForm } from "./quotation-form";
@@ -35,11 +36,10 @@ export default async function NewQuotationPage({
     defaultContactPhone = customer?.phone;
   }
 
-  const [org] = await db
-    .select({ defaultGstRate: organizations.defaultGstRate })
-    .from(organizations)
-    .where(eq(organizations.id, user.orgId))
-    .limit(1);
+  const [context, rentalLine] = await Promise.all([
+    billingFormContext(user.orgId),
+    leadId ? rentalLineForLead(user.orgId, leadId) : Promise.resolve(null),
+  ]);
 
   return (
     <>
@@ -51,7 +51,10 @@ export default async function NewQuotationPage({
             defaultContactPhone={defaultContactPhone}
             leadId={leadId}
             customerId={customerId}
-            defaultGstRate={org?.defaultGstRate ?? 18}
+            defaultGstRate={context.defaultGstRate}
+            orgStateCode={context.orgStateCode}
+            stockOptions={context.stockOptions}
+            defaultItems={rentalLine ? [rentalLine] : undefined}
           />
         </Card>
       </div>

@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { NewVehicleDialog } from "./new-vehicle-dialog";
 import { VehicleStatusSelect } from "./vehicle-status-select";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
@@ -35,7 +36,18 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHeader title="Vehicles" description="Your rental fleet." action={<NewVehicleDialog />} />
+      <PageHeader
+        title="Vehicles"
+        description="Your rental fleet."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/vehicles/calendar" variant="ghost" size="sm">
+              Calendar
+            </ButtonLink>
+            <NewVehicleDialog />
+          </div>
+        }
+      />
       <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
         {rows.length === 0 ? (
           <EmptyState title="No vehicles yet" description="Add your rental fleet to track availability and link vehicles to bookings." />

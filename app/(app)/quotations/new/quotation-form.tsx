@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { LineItemsEditor } from "@/components/billing/line-items-editor";
+import { LineItemsEditor, type EditorLineItem, type StockOption } from "@/components/billing/line-items-editor";
 import { createQuotation } from "../actions";
 
 const initialState: { error: string | null } = { error: null };
@@ -14,12 +14,18 @@ export function QuotationForm({
   leadId,
   customerId,
   defaultGstRate,
+  orgStateCode,
+  stockOptions,
+  defaultItems,
 }: {
   defaultContactName?: string;
   defaultContactPhone?: string;
   leadId?: string;
   customerId?: string;
   defaultGstRate: number;
+  orgStateCode: string | null;
+  stockOptions: StockOption[];
+  defaultItems?: EditorLineItem[];
 }) {
   const [state, formAction, pending] = useActionState(createQuotation, initialState);
 
@@ -39,7 +45,13 @@ export function QuotationForm({
         </div>
       </div>
 
-      <LineItemsEditor defaultGstEnabled={false} defaultGstRate={defaultGstRate} />
+      <LineItemsEditor
+        defaultItems={defaultItems}
+        defaultGstEnabled={false}
+        defaultGstRate={defaultGstRate}
+        orgStateCode={orgStateCode}
+        stockOptions={stockOptions}
+      />
 
       <div>
         <Label htmlFor="notes">Notes (optional)</Label>

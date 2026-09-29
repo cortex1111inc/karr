@@ -1,12 +1,14 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { invoiceItems, invoices, leads, quotationItems, quotations } from "@/db/schema";
+import { leads, quotationItems, quotations } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { readGstFields } from "@/lib/billing/gst-fields";
+import { createInvoiceRecord, ownedStockItemIds } from "@/lib/billing/invoices";
 import { calculateTotals } from "@/lib/billing/money";
 import { nextDocumentNumber } from "@/lib/billing/numbering";
 import { parseLineItems } from "@/lib/billing/schema";
@@ -58,10 +60,14 @@ export async function createQuotation(_prevState: { error: string | null }, form
     return { error: items.error };
   }
 
+  const gst = await readGstFields(user.orgId, formData);
+  if ("error" in gst) return { error: gst.error };
+
   const totals = calculateTotals(items.data, parsed.data.gstEnabled, parsed.data.gstRate);
-  const [leadId, customerId] = await Promise.all([
+  const [leadId, customerId, lines] = await Promise.all([
     ownedLeadId(user.orgId, parsed.data.leadId),
     ownedCustomerId(user.orgId, parsed.data.customerId),
+    ownedStockItemIds(user.orgId, items.data),
   ]);
   const number = await nextDocumentNumber(user.orgId, "quotation");
 
@@ -77,6 +83,9 @@ export async function createQuotation(_prevState: { error: string | null }, form
       notes: parsed.data.notes,
       gstEnabled: parsed.data.gstEnabled,
       gstRate: parsed.data.gstEnabled ? parsed.data.gstRate : 0,
+      placeOfSupply: gst.placeOfSupply,
+      customerGstin: gst.customerGstin,
+      interState: parsed.data.gstEnabled && gst.interState,
       subtotal: totals.subtotal.toString(),
       taxAmount: totals.taxAmount.toString(),
       total: totals.total.toString(),
@@ -86,12 +95,14 @@ export async function createQuotation(_prevState: { error: string | null }, form
     .returning({ id: quotations.id });
 
   await db.insert(quotationItems).values(
-    items.data.map((item, index) => ({
+    lines.map((item, index) => ({
       quotationId: quotation.id,
       description: item.description,
+      hsnSac: item.hsnSac,
+      stockItemId: item.stockItemId,
       quantity: item.quantity.toString(),
       unitPrice: item.unitPrice.toString(),
-      amount: (item.quantity * item.unitPrice).toString(),
+      amount: (Math.round(item.quantity * item.unitPrice * 100) / 100).toString(),
       sortOrder: index,
     })),
   );
@@ -138,7 +149,9 @@ export async function deleteQuotation(quotationId: string) {
   revalidatePath("/quotations");
 }
 
-export async function convertQuotationToInvoice(quotationId: string) {
+// Goes through createInvoiceRecord so linked stock is decremented exactly as
+// for a hand-made invoice. Returns an error (e.g. out of stock) or redirects.
+export async function convertQuotationToInvoice(quotationId: string): Promise<{ error: string | null }> {
   const user = await requireUser();
 
   const [quotation] = await db
@@ -147,47 +160,43 @@ export async function convertQuotationToInvoice(quotationId: string) {
     .where(and(eq(quotations.id, quotationId), eq(quotations.orgId, user.orgId)))
     .limit(1);
 
-  if (!quotation) return;
+  if (!quotation) return { error: "Quotation not found." };
 
-  const items = await db.select().from(quotationItems).where(eq(quotationItems.quotationId, quotationId));
+  const items = await db
+    .select()
+    .from(quotationItems)
+    .where(eq(quotationItems.quotationId, quotationId))
+    .orderBy(asc(quotationItems.sortOrder));
+  if (items.length === 0) return { error: "This quotation has no line items." };
 
-  const number = await nextDocumentNumber(user.orgId, "invoice");
-
-  const [invoice] = await db
-    .insert(invoices)
-    .values({
-      orgId: user.orgId,
+  const result = await createInvoiceRecord({
+    orgId: user.orgId,
+    createdBy: user.id,
+    header: {
       customerId: quotation.customerId,
       leadId: quotation.leadId,
       quotationId: quotation.id,
-      number,
       contactName: quotation.contactName,
       contactPhone: quotation.contactPhone,
       notes: quotation.notes,
       gstEnabled: quotation.gstEnabled,
       gstRate: quotation.gstRate,
-      subtotal: quotation.subtotal,
-      taxAmount: quotation.taxAmount,
-      total: quotation.total,
-      publicToken: generatePublicToken(),
-      createdBy: user.id,
-    })
-    .returning({ id: invoices.id });
-
-  if (items.length > 0) {
-    await db.insert(invoiceItems).values(
-      items.map((item) => ({
-        invoiceId: invoice.id,
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        amount: item.amount,
-        sortOrder: item.sortOrder,
-      })),
-    );
-  }
+      placeOfSupply: quotation.placeOfSupply,
+      customerGstin: quotation.customerGstin,
+      interState: quotation.interState,
+    },
+    items: items.map((i) => ({
+      description: i.description,
+      quantity: Number(i.quantity),
+      unitPrice: Number(i.unitPrice),
+      hsnSac: i.hsnSac,
+      stockItemId: i.stockItemId,
+    })),
+  });
+  if (!result.ok) return { error: result.error };
 
   revalidatePath("/quotations");
   revalidatePath("/invoices");
-  redirect(`/invoices/${invoice.id}`);
+  revalidatePath("/inventory");
+  redirect(`/invoices/${result.id}`);
 }

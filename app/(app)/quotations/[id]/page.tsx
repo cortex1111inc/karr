@@ -89,7 +89,9 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
               </div>
               {quotation.gstEnabled ? (
                 <div className="flex justify-between">
-                  <dt className="text-muted">GST ({quotation.gstRate}%)</dt>
+                  <dt className="text-muted">
+                    {quotation.interState ? "IGST" : "CGST+SGST"} ({quotation.gstRate}%)
+                  </dt>
                   <dd className="font-mono tabular-nums">{formatCurrency(quotation.taxAmount)}</dd>
                 </div>
               ) : null}
@@ -105,6 +107,17 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
           </Card>
 
           <div className="flex flex-col gap-4">
+            {quotation.respondedAt ? (
+              <Card className="p-5">
+                <h2 className="font-display text-sm font-bold">
+                  {quotation.status === "accepted" ? "Accepted by the customer" : "Customer asked for changes"}
+                </h2>
+                <p className="mt-0.5 text-xs text-faint">{quotation.respondedAt.toLocaleString("en-IN")}</p>
+                {quotation.customerResponse ? (
+                  <p className="mt-2 whitespace-pre-line text-sm">{quotation.customerResponse}</p>
+                ) : null}
+              </Card>
+            ) : null}
             <Card className="p-5">
               <h2 className="font-display text-sm font-bold">Share</h2>
               <p className="mt-0.5 text-sm text-muted">Send this link to the customer — no login needed.</p>

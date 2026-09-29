@@ -22,8 +22,8 @@ export function InvoiceStatusSelect({ invoiceId, status }: { invoiceId: string; 
       onChange={(e) => {
         const next = e.target.value as (typeof MANUAL_STATUSES)[number];
         startTransition(async () => {
-          await updateInvoiceStatus(invoiceId, next);
-          toast(`Marked ${next}`);
+          const res = await updateInvoiceStatus(invoiceId, next);
+          toast(res.error ?? `Marked ${next}`, res.error ? "error" : "success");
         });
       }}
     >

@@ -11,7 +11,7 @@ import { generatePublicToken } from "@/lib/tokens";
 import { getSiteUrl } from "@/lib/site";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { changeLeadStage, recordStageChange } from "@/lib/lead-stage";
-
+import { conflictMessage, findVehicleConflict, parseRentalRange } from "@/lib/rentals";
 
 // A tracking link picked in a form must belong to this org; blank = none.
 async function orgTrackingLinkId(orgId: string, raw: FormDataEntryValue | null): Promise<string | null | "invalid"> {
@@ -111,6 +111,26 @@ export async function updateLead(leadId: string, _prevState: { error: string | n
     return { error: parsed.error.issues[0]?.message ?? "Check the form and try again." };
   }
 
+  const rental = parseRentalRange(formData.get("rentalStart"), formData.get("rentalEnd"));
+  if ("error" in rental) return { error: rental.error };
+  if (rental.rentalStart && rental.rentalEnd) {
+    const [current] = await db
+      .select({ vehicleId: leads.vehicleId })
+      .from(leads)
+      .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)))
+      .limit(1);
+    if (current?.vehicleId) {
+      const conflict = await findVehicleConflict({
+        orgId: user.orgId,
+        vehicleId: current.vehicleId,
+        rentalStart: rental.rentalStart,
+        rentalEnd: rental.rentalEnd,
+        excludeLeadId: leadId,
+      });
+      if (conflict) return { error: conflictMessage(conflict) };
+    }
+  }
+
   // Only touch attribution when the form actually sent the field.
   let trackingPatch: { trackingLinkId?: string | null } = {};
   if (formData.has("trackingLinkId")) {
@@ -121,7 +141,7 @@ export async function updateLead(leadId: string, _prevState: { error: string | n
 
   await db
     .update(leads)
-    .set({ ...parsed.data, ...trackingPatch, updatedAt: new Date() })
+    .set({ ...parsed.data, ...rental, ...trackingPatch, updatedAt: new Date() })
     .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)));
 
   revalidatePath(`/leads/${leadId}`);
@@ -294,7 +314,7 @@ export async function notifyReadyForPickup(leadId: string) {
   revalidatePath(`/leads/${leadId}`);
 }
 
-export async function assignVehicleToLead(leadId: string, vehicleId: string) {
+export async function assignVehicleToLead(leadId: string, vehicleId: string): Promise<{ error: string | null }> {
   const user = await requireUser();
 
   let nextVehicleId: string | null = null;
@@ -304,8 +324,24 @@ export async function assignVehicleToLead(leadId: string, vehicleId: string) {
       .from(vehicles)
       .where(and(eq(vehicles.id, vehicleId), eq(vehicles.orgId, user.orgId)))
       .limit(1);
-    if (!vehicle) return;
+    if (!vehicle) return { error: "Vehicle not found." };
     nextVehicleId = vehicle.id;
+
+    const [lead] = await db
+      .select({ rentalStart: leads.rentalStart, rentalEnd: leads.rentalEnd })
+      .from(leads)
+      .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)))
+      .limit(1);
+    if (lead?.rentalStart && lead.rentalEnd) {
+      const conflict = await findVehicleConflict({
+        orgId: user.orgId,
+        vehicleId: vehicle.id,
+        rentalStart: lead.rentalStart,
+        rentalEnd: lead.rentalEnd,
+        excludeLeadId: leadId,
+      });
+      if (conflict) return { error: conflictMessage(conflict) };
+    }
   }
 
   const [updated] = await db
@@ -324,4 +360,6 @@ export async function assignVehicleToLead(leadId: string, vehicleId: string) {
 
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/leads");
+  revalidatePath("/vehicles/calendar");
+  return { error: null };
 }

@@ -11,6 +11,7 @@ import {
   uniqueIndex,
   primaryKey,
   jsonb,
+  date,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -49,6 +50,14 @@ export const organizations = pgTable(
     // sent/partial this many days; optionally the customer gets a WhatsApp.
     invoiceReminderDays: integer("invoice_reminder_days").notNull().default(7),
     invoiceReminderWhatsapp: boolean("invoice_reminder_whatsapp").notNull().default(false),
+    // Billing profile printed on quotes/invoices. All optional; stateCode is
+    // the 2-digit GST state code that decides CGST+SGST vs IGST.
+    legalName: text("legal_name"),
+    gstin: text("gstin"),
+    billingAddress: text("billing_address"),
+    stateCode: text("state_code"),
+    logoUrl: text("logo_url"),
+    invoiceTerms: text("invoice_terms"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("organizations_slug_idx").on(table.slug)],
@@ -134,6 +143,10 @@ export const leads = pgTable(
     source: leadSourceEnum("source").notNull().default("other"),
     stage: leadStageEnum("stage").notNull().default("new"),
     followUpAt: timestamp("follow_up_at", { withTimezone: true }),
+    // Rental period (inclusive dates). Used for vehicle conflict checks, the
+    // fleet calendar, and returning the vehicle to available afterwards.
+    rentalStart: date("rental_start", { mode: "string" }),
+    rentalEnd: date("rental_end", { mode: "string" }),
     // Unlisted public token for the customer-facing status page (/status/[token]).
     // Not a secret in the security sense — just unguessable enough that only
     // someone with the link (the customer it was sent to) can view it.
@@ -145,6 +158,7 @@ export const leads = pgTable(
     index("leads_org_idx").on(table.orgId),
     index("leads_org_stage_idx").on(table.orgId, table.stage),
     uniqueIndex("leads_public_token_idx").on(table.publicToken),
+    index("leads_vehicle_idx").on(table.vehicleId).where(sql`${table.vehicleId} IS NOT NULL`),
   ],
 );
 
@@ -364,6 +378,14 @@ export const quotations = pgTable(
     subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull().default("0"),
     taxAmount: numeric("tax_amount", { precision: 12, scale: 2 }).notNull().default("0"),
     total: numeric("total", { precision: 12, scale: 2 }).notNull().default("0"),
+    // GST: customer's state code and GSTIN; interState (IGST instead of
+    // CGST+SGST) is fixed at creation so later profile edits don't rewrite it.
+    placeOfSupply: text("place_of_supply"),
+    customerGstin: text("customer_gstin"),
+    interState: boolean("inter_state").notNull().default(false),
+    // Customer's accept / request-changes from the public quote page.
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    customerResponse: text("customer_response"),
     publicToken: text("public_token").notNull(),
     createdBy: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -382,6 +404,8 @@ export const quotationItems = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     quotationId: uuid("quotation_id").notNull().references(() => quotations.id, { onDelete: "cascade" }),
     description: text("description").notNull(),
+    hsnSac: text("hsn_sac"),
+    stockItemId: uuid("stock_item_id").references(() => stockItems.id, { onDelete: "set null" }),
     quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull().default("1"),
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull().default("0"),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull().default("0"),
@@ -421,6 +445,9 @@ export const invoices = pgTable(
     paymentLinkId: text("payment_link_id"),
     paymentLinkUrl: text("payment_link_url"),
     paymentLinkAmount: numeric("payment_link_amount", { precision: 12, scale: 2 }),
+    placeOfSupply: text("place_of_supply"),
+    customerGstin: text("customer_gstin"),
+    interState: boolean("inter_state").notNull().default(false),
     publicToken: text("public_token").notNull(),
     createdBy: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -440,6 +467,10 @@ export const invoiceItems = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
     description: text("description").notNull(),
+    hsnSac: text("hsn_sac"),
+    // Linked stock is decremented when the invoice is created and restored
+    // if it's voided or deleted (lib/billing/invoices.ts).
+    stockItemId: uuid("stock_item_id").references(() => stockItems.id, { onDelete: "set null" }),
     quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull().default("1"),
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull().default("0"),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull().default("0"),

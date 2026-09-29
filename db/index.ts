@@ -10,3 +10,7 @@ if (!process.env.DATABASE_URL) {
 export const dbClient = postgres(process.env.DATABASE_URL, { prepare: false });
 
 export const db = drizzle(dbClient, { schema });
+
+// Either the pool or an open transaction — for helpers that must be able to
+// run inside a caller's transaction.
+export type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
