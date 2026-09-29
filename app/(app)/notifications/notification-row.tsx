@@ -12,6 +12,7 @@ const KIND_LABEL: Record<string, string> = {
   service_due: "Service due",
   low_stock: "Low stock",
   system: "System",
+  invoice_overdue: "Unpaid invoice",
 };
 
 export function NotificationRow({

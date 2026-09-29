@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, gte } from "drizzle-orm";
 import { db } from "@/db";
-import { notifications, notificationKindEnum } from "@/db/schema";
+import { notifications, notificationKindEnum, profiles } from "@/db/schema";
 
 export type NotifyInput = {
   orgId: string;
@@ -20,6 +20,14 @@ export type NotifyInput = {
 // just under a day, so a daily cron never double-notifies for the same
 // still-true condition on consecutive runs).
 export async function notify(input: NotifyInput) {
+  // Respect the recipient's muted kinds (set on /settings/account).
+  const [recipient] = await db
+    .select({ muted: profiles.mutedNotificationKinds })
+    .from(profiles)
+    .where(eq(profiles.id, input.profileId))
+    .limit(1);
+  if (!recipient || recipient.muted.includes(input.kind)) return;
+
   if (input.sourceType && input.sourceId) {
     const since = new Date();
     since.setHours(since.getHours() - (input.dedupeWithinHours ?? 20));

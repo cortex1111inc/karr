@@ -42,6 +42,8 @@ export default async function SettingsPage() {
                 serviceIntervalDays={org.serviceIntervalDays}
                 reminderMessage={org.reminderMessage}
                 staleLeadDays={org.staleLeadDays}
+                invoiceReminderDays={org.invoiceReminderDays}
+                invoiceReminderWhatsapp={org.invoiceReminderWhatsapp}
               />
             </div>
           </Card>

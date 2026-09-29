@@ -9,6 +9,7 @@ import { leadSourceEnum, leads, organizations, trackingLinks } from "@/db/schema
 import { REF_COOKIE } from "@/lib/growth";
 import { generatePublicToken } from "@/lib/tokens";
 import { clientKey, consumeRateLimit } from "@/lib/rate-limit";
+import { recordStageChange } from "@/lib/lead-stage";
 
 const bookingSchema = z.object({
   contactName: z.string().trim().min(1, "Name is required").max(100),
@@ -73,7 +74,8 @@ export async function submitBooking(slug: string, _prevState: { error: string | 
       trackingLinkId,
       publicToken: generatePublicToken(),
     })
-    .returning({ publicToken: leads.publicToken });
+    .returning({ id: leads.id, publicToken: leads.publicToken });
+  await recordStageChange({ orgId: org.id, leadId: lead.id, from: null, to: "new", changedBy: null });
 
   redirect(`/status/${lead.publicToken}?new=1`);
 }

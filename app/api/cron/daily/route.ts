@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { and, eq, isNotNull, isNull, lt, lte, notInArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, lte, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { customers, leads, organizations, profiles, rateLimits, stockItems } from "@/db/schema";
+import { customers, invoices, leads, organizations, profiles, rateLimits, stockItems } from "@/db/schema";
+import { formatCurrency } from "@/lib/billing/money";
+import { getSiteUrl } from "@/lib/site";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { renderReminderMessage } from "@/lib/whatsapp/templates";
 import { notify } from "@/lib/notifications";
@@ -11,9 +13,11 @@ import { notify } from "@/lib/notifications";
 // cron-job quota. Handles:
 //   1. Service/rental retention reminders (WhatsApp)
 //   2. In-app "follow-up due" nudges for leads
-//   3. In-app "stale lead" nudges (no update in org.staleLeadDays days)
+//   3. In-app "stale lead" nudges (no update in org.staleLeadDays days),
+//      escalated to the owner at 2x that
 //   4. In-app "low stock" nudges for the owner
-//   5. Pruning expired rate-limit windows
+//   5. Unpaid-invoice reminders (owner in-app + optional customer WhatsApp)
+//   6. Pruning expired rate-limit windows
 //
 // Caps keep one run inside maxDuration. Service reminders call WhatsApp
 // (slow, external) but each row rolls its due date forward once handled, so
@@ -42,6 +46,9 @@ export async function GET(request: NextRequest) {
     followUpNudges: 0,
     staleLeadNudges: 0,
     lowStockNudges: 0,
+    staleLeadEscalations: 0,
+    invoiceReminders: 0,
+    invoiceWhatsApps: 0,
   };
 
   // Cache each org's owner profile (fallback notification target for
@@ -170,6 +177,26 @@ export async function GET(request: NextRequest) {
       dedupeWithinHours: lead.staleLeadDays * 24 - 4,
     });
     results.staleLeadNudges += 1;
+
+    // Escalate to the owner once a lead has sat for twice the threshold —
+    // skipped when the owner is already the one being nudged.
+    const escalateThreshold = new Date(now);
+    escalateThreshold.setDate(escalateThreshold.getDate() - lead.staleLeadDays * 2);
+    const ownerId = await resolveOwnerId(lead.orgId);
+    if (lead.updatedAt <= escalateThreshold && ownerId && ownerId !== profileId) {
+      await notify({
+        orgId: lead.orgId,
+        profileId: ownerId,
+        kind: "stale_lead",
+        title: `${lead.contactName} has gone cold`,
+        body: `No updates in ${lead.staleLeadDays * 2}+ days — the assigned teammate hasn't picked it up.`,
+        link: `/leads/${lead.id}`,
+        sourceType: "lead",
+        sourceId: lead.id,
+        dedupeWithinHours: lead.staleLeadDays * 24 - 4,
+      });
+      results.staleLeadEscalations += 1;
+    }
   }
 
   // 4. Low-stock nudges — notify the owner, dedupe weekly (a restock reminder
@@ -205,7 +232,78 @@ export async function GET(request: NextRequest) {
     results.lowStockNudges += 1;
   }
 
-  // 5. Prune rate-limit windows older than a day
+  // 5. Unpaid invoices — sent/partial and older than org.invoiceReminderDays.
+  // The owner gets an in-app notification (deduped weekly); the customer
+  // gets a WhatsApp at most once per interval, when the org opted in.
+  const unpaid = await db
+    .select({
+      id: invoices.id,
+      orgId: invoices.orgId,
+      number: invoices.number,
+      contactName: invoices.contactName,
+      contactPhone: invoices.contactPhone,
+      customerId: invoices.customerId,
+      total: invoices.total,
+      amountPaid: invoices.amountPaid,
+      publicToken: invoices.publicToken,
+      createdAt: invoices.createdAt,
+      lastReminderSentAt: invoices.lastReminderSentAt,
+      reminderDays: organizations.invoiceReminderDays,
+      reminderWhatsapp: organizations.invoiceReminderWhatsapp,
+      orgName: organizations.name,
+    })
+    .from(invoices)
+    .innerJoin(organizations, eq(invoices.orgId, organizations.id))
+    .where(
+      and(
+        inArray(invoices.status, ["sent", "partial"]),
+        sql`${invoices.createdAt} <= now() - make_interval(days => ${organizations.invoiceReminderDays})`,
+      ),
+    )
+    .limit(NOTIFY_BATCH);
+
+  let invoiceWhatsAppBudget = WHATSAPP_BATCH;
+  for (const inv of unpaid) {
+    const due = Number(inv.total) - Number(inv.amountPaid);
+    if (due <= 0) continue;
+
+    const ownerId = await resolveOwnerId(inv.orgId);
+    if (ownerId) {
+      await notify({
+        orgId: inv.orgId,
+        profileId: ownerId,
+        kind: "invoice_overdue",
+        title: `${inv.number} is unpaid`,
+        body: `${inv.contactName} still owes ${formatCurrency(due)}.`,
+        link: `/invoices/${inv.id}`,
+        sourceType: "invoice",
+        sourceId: inv.id,
+        dedupeWithinHours: 24 * 7,
+      });
+      results.invoiceReminders += 1;
+    }
+
+    const intervalAgo = new Date(now);
+    intervalAgo.setDate(intervalAgo.getDate() - inv.reminderDays);
+    if (
+      inv.reminderWhatsapp &&
+      invoiceWhatsAppBudget > 0 &&
+      (!inv.lastReminderSentAt || inv.lastReminderSentAt <= intervalAgo)
+    ) {
+      invoiceWhatsAppBudget -= 1;
+      await sendWhatsApp({
+        orgId: inv.orgId,
+        to: inv.contactPhone,
+        kind: "invoice_reminder",
+        customerId: inv.customerId ?? undefined,
+        body: `Hi ${inv.contactName}, a friendly reminder from ${inv.orgName}: ${formatCurrency(due)} is pending on invoice ${inv.number}. View it here: ${getSiteUrl()}/invoice/${inv.publicToken}`,
+      });
+      await db.update(invoices).set({ lastReminderSentAt: now }).where(eq(invoices.id, inv.id));
+      results.invoiceWhatsApps += 1;
+    }
+  }
+
+  // 6. Prune rate-limit windows older than a day
   const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   await db.delete(rateLimits).where(lt(rateLimits.windowStart, cutoff));
 

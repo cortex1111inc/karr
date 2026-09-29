@@ -5,18 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { ConfirmButton } from "@/components/ui/dialog";
 import { useActionToast } from "@/components/ui/toast";
-import { changePassword, signOutEverywhere, updateName } from "./actions";
+import { changePassword, signOutEverywhere, updateName, updateNotificationPrefs } from "./actions";
 
 const initial = { error: null as string | null };
 
-export function NameForm({ fullName }: { fullName: string }) {
+export function NameForm({ fullName, phone }: { fullName: string; phone: string | null }) {
   const [state, formAction, pending] = useActionState(updateName, initial);
-  useActionToast(state, pending, "Name updated");
+  useActionToast(state, pending, "Profile updated");
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">
       <div className="min-w-0 flex-1 sm:max-w-xs">
         <Label htmlFor="fullName">Name</Label>
         <Input id="fullName" name="fullName" required defaultValue={fullName} autoComplete="name" />
+      </div>
+      <div className="min-w-0 flex-1 sm:max-w-xs">
+        <Label htmlFor="phone">Phone (for staff alerts)</Label>
+        <Input id="phone" name="phone" type="tel" defaultValue={phone ?? ""} autoComplete="tel" placeholder="+91 90000 00000" />
       </div>
       <Button type="submit" variant="accent" size="sm" disabled={pending}>
         {pending ? "Saving…" : "Save"}
@@ -72,5 +76,39 @@ export function SignOutEverywhereButton() {
       confirmLabel="Sign out everywhere"
       onConfirm={() => signOutEverywhere()}
     />
+  );
+}
+
+const PREF_KINDS: { kind: string; label: string; hint: string }[] = [
+  { kind: "follow_up_due", label: "Follow-ups due", hint: "A lead you own has a follow-up date today or earlier." },
+  { kind: "stale_lead", label: "Stale leads", hint: "A lead has had no activity for a while." },
+  { kind: "low_stock", label: "Low stock", hint: "A stock item fell to its alert threshold." },
+  { kind: "invoice_overdue", label: "Unpaid invoices", hint: "An invoice is still unpaid after the reminder interval." },
+  { kind: "service_due", label: "Service due", hint: "A customer is due for a service." },
+];
+
+export function NotificationPrefsForm({ muted }: { muted: string[] }) {
+  const [state, formAction, pending] = useActionState(updateNotificationPrefs, initial);
+  useActionToast(state, pending, "Preferences saved");
+  return (
+    <form action={formAction} className="flex flex-col gap-3">
+      <fieldset className="flex flex-col gap-3">
+        <legend className="sr-only">Notifications to receive</legend>
+        {PREF_KINDS.map((p) => (
+          <label key={p.kind} className="flex items-start gap-3 text-sm">
+            <input type="checkbox" name="kind" value={p.kind} defaultChecked={!muted.includes(p.kind)} className="mt-0.5 size-4 accent-accent" />
+            <span>
+              <span className="font-medium">{p.label}</span>
+              <span className="block text-xs text-faint">{p.hint}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      <div>
+        <Button type="submit" variant="accent" size="sm" disabled={pending}>
+          {pending ? "Saving…" : "Save preferences"}
+        </Button>
+      </div>
+    </form>
   );
 }

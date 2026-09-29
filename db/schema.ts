@@ -45,6 +45,10 @@ export const organizations = pgTable(
     defaultGstRate: integer("default_gst_rate").notNull().default(18),
     // Set when the owner hides the dashboard's getting-started checklist.
     onboardingDismissedAt: timestamp("onboarding_dismissed_at", { withTimezone: true }),
+    // Unpaid-invoice nudges: owner is notified once an invoice has been
+    // sent/partial this many days; optionally the customer gets a WhatsApp.
+    invoiceReminderDays: integer("invoice_reminder_days").notNull().default(7),
+    invoiceReminderWhatsapp: boolean("invoice_reminder_whatsapp").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("organizations_slug_idx").on(table.slug)],
@@ -60,6 +64,9 @@ export const profiles = pgTable(
     fullName: text("full_name").notNull(),
     email: text("email").notNull(),
     role: text("role", { enum: ["owner", "staff"] }).notNull().default("staff"),
+    phone: text("phone"),
+    // Notification kinds this person has turned off (in-app).
+    mutedNotificationKinds: text("muted_notification_kinds").array().notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("profiles_org_idx").on(table.orgId)],
@@ -160,6 +167,7 @@ export const whatsappMessageKindEnum = pgEnum("whatsapp_message_kind", [
   "service_reminder",
   "campaign",
   "manual",
+  "invoice_reminder",
 ]);
 
 export const whatsappMessageStatusEnum = pgEnum("whatsapp_message_status", [
@@ -255,6 +263,7 @@ export const notificationKindEnum = pgEnum("notification_kind", [
   "service_due",
   "low_stock",
   "system",
+  "invoice_overdue",
 ]);
 
 // In-app task reminders, populated by the daily cron (app/api/cron/daily).
@@ -391,6 +400,9 @@ export const invoices = pgTable(
     // Denormalized running total from `payments`, kept in sync on every
     // recordPayment() call — avoids summing payments on every read.
     amountPaid: numeric("amount_paid", { precision: 12, scale: 2 }).notNull().default("0"),
+    // Last WhatsApp payment reminder sent to the customer (cron), so they
+    // get at most one per org.invoiceReminderDays.
+    lastReminderSentAt: timestamp("last_reminder_sent_at", { withTimezone: true }),
     publicToken: text("public_token").notNull(),
     createdBy: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -628,3 +640,24 @@ export const trackingLinksRelations = relations(trackingLinks, ({ one, many }) =
   leads: many(leads),
   clicks: many(trackingLinkClicks),
 }));
+
+// Every stage transition, written wherever a lead's stage changes (manual
+// move, conversion, quotation, public booking). Powers point-in-time
+// funnels and time-to-convert in Reports. History starts 2026-09-29 —
+// transitions before that were never recorded.
+export const leadStageChanges = pgTable(
+  "lead_stage_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    leadId: uuid("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
+    fromStage: leadStageEnum("from_stage"),
+    toStage: leadStageEnum("to_stage").notNull(),
+    changedBy: uuid("changed_by").references(() => profiles.id, { onDelete: "set null" }),
+    changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("lead_stage_changes_lead_idx").on(table.leadId, table.changedAt),
+    index("lead_stage_changes_org_idx").on(table.orgId, table.changedAt),
+  ],
+);

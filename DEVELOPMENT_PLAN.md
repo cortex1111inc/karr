@@ -261,11 +261,11 @@ ALTER TABLE org_sites ENABLE ROW LEVEL SECURITY;
 
 ## WS7 — Automation completion
 
-- [ ] **Lead stage history** (needed for accurate funnels in WS10 and for automations): `lead_stage_changes (id, org_id, lead_id, from_stage, to_stage, changed_by, changed_at)` + RLS; write it from `updateLeadStage`, `convertLeadToCustomer`, and anywhere else stage changes. Backfill not possible for past changes — note that in reports.
-- [ ] **Vehicle status automation**: when a lead with a `vehicleId` moves to `booked`, set the vehicle `rented`; when the rental ends (WS9.4 dates) the daily cron sets it back to `available`. Today status is purely manual.
-- [ ] **Auto-nudge escalation**: stale leads (Phase 3) escalate to the owner if still stale after 2× `staleLeadDays`.
-- [ ] **Unpaid invoice reminders**: daily cron flags invoices `sent`/`partial` older than N days (new org setting `invoiceReminderDays`); in-app notification to owner + optional WhatsApp/email to the customer with the `/invoice/[token]` link (and the WS8.4 pay link).
-- [ ] **Notification preferences** per profile: which kinds they get, and via which channel (in-app always; email/WhatsApp optional once WS8 lands).
+- [x] **Lead stage history** (needed for accurate funnels in WS10 and for automations): `lead_stage_changes (id, org_id, lead_id, from_stage, to_stage, changed_by, changed_at)` + RLS; write it from `updateLeadStage`, `convertLeadToCustomer`, and anywhere else stage changes. Backfill not possible for past changes — note that in reports.
+- [ ] **Vehicle status automation** *(booked → rented done in WS7; auto-return waits on WS9.4 dates)*: when a lead with a `vehicleId` moves to `booked`, set the vehicle `rented`; when the rental ends (WS9.4 dates) the daily cron sets it back to `available`. Today status is purely manual.
+- [x] **Auto-nudge escalation**: stale leads (Phase 3) escalate to the owner if still stale after 2× `staleLeadDays`.
+- [x] **Unpaid invoice reminders**: daily cron flags invoices `sent`/`partial` older than N days (new org setting `invoiceReminderDays`); in-app notification to owner + optional WhatsApp/email to the customer with the `/invoice/[token]` link (and the WS8.4 pay link).
+- [x] **Notification preferences** per profile: which kinds they get, and via which channel (in-app always; email/WhatsApp optional once WS8 lands).
 
 ---
 

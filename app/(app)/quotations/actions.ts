@@ -5,12 +5,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { invoiceItems, invoices, quotationItems, quotations } from "@/db/schema";
+import { invoiceItems, invoices, leads, quotationItems, quotations } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { calculateTotals } from "@/lib/billing/money";
 import { nextDocumentNumber } from "@/lib/billing/numbering";
 import { parseLineItems } from "@/lib/billing/schema";
 import { generatePublicToken } from "@/lib/tokens";
+import { changeLeadStage } from "@/lib/lead-stage";
+import { ownedCustomerId, ownedLeadId } from "@/lib/org-refs";
 
 const quotationSchema = z.object({
   contactName: z.string().trim().min(1, "Name is required"),
@@ -57,14 +59,18 @@ export async function createQuotation(_prevState: { error: string | null }, form
   }
 
   const totals = calculateTotals(items.data, parsed.data.gstEnabled, parsed.data.gstRate);
+  const [leadId, customerId] = await Promise.all([
+    ownedLeadId(user.orgId, parsed.data.leadId),
+    ownedCustomerId(user.orgId, parsed.data.customerId),
+  ]);
   const number = await nextDocumentNumber(user.orgId, "quotation");
 
   const [quotation] = await db
     .insert(quotations)
     .values({
       orgId: user.orgId,
-      leadId: parsed.data.leadId,
-      customerId: parsed.data.customerId,
+      leadId,
+      customerId,
       number,
       contactName: parsed.data.contactName,
       contactPhone: parsed.data.contactPhone,
@@ -89,6 +95,19 @@ export async function createQuotation(_prevState: { error: string | null }, form
       sortOrder: index,
     })),
   );
+
+  // Quoting a lead that's still new/contacted moves it along the pipeline.
+  if (leadId) {
+    const [lead] = await db
+      .select({ stage: leads.stage })
+      .from(leads)
+      .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)))
+      .limit(1);
+    if (lead && (lead.stage === "new" || lead.stage === "contacted")) {
+      await changeLeadStage({ orgId: user.orgId, leadId, to: "quoted", changedBy: user.id });
+      revalidatePath("/leads");
+    }
+  }
 
   revalidatePath("/quotations");
   redirect(`/quotations/${quotation.id}`);

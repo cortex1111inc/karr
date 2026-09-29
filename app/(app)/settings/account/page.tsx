@@ -2,10 +2,18 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
-import { NameForm, PasswordChangeForm, SignOutEverywhereButton } from "./account-forms";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { profiles } from "@/db/schema";
+import { NameForm, NotificationPrefsForm, PasswordChangeForm, SignOutEverywhereButton } from "./account-forms";
 
 export default async function AccountPage() {
   const user = await requireUser();
+  const [profile] = await db
+    .select({ phone: profiles.phone, muted: profiles.mutedNotificationKinds })
+    .from(profiles)
+    .where(eq(profiles.id, user.id))
+    .limit(1);
 
   return (
     <>
@@ -24,7 +32,14 @@ export default async function AccountPage() {
             Signed in as <span className="font-medium text-foreground">{user.email}</span> · {user.role === "owner" ? "Owner" : "Staff"}
           </p>
           <div className="mt-4">
-            <NameForm fullName={user.fullName} />
+            <NameForm fullName={user.fullName} phone={profile?.phone ?? null} />
+          </div>
+        </Card>
+        <Card className="p-5">
+          <h2 className="font-display text-sm font-bold">Notifications</h2>
+          <p className="mt-0.5 text-sm text-muted">Choose which in-app reminders you get.</p>
+          <div className="mt-4">
+            <NotificationPrefsForm muted={profile?.muted ?? []} />
           </div>
         </Card>
         <Card className="p-5">

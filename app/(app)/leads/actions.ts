@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth";
 import { generatePublicToken } from "@/lib/tokens";
 import { getSiteUrl } from "@/lib/site";
 import { sendWhatsApp } from "@/lib/whatsapp";
+import { changeLeadStage, recordStageChange } from "@/lib/lead-stage";
 
 
 // A tracking link picked in a form must belong to this org; blank = none.
@@ -48,13 +49,17 @@ export async function createLead(_prevState: { error: string | null }, formData:
   const trackingLinkId = await orgTrackingLinkId(user.orgId, formData.get("trackingLinkId"));
   if (trackingLinkId === "invalid") return { error: "That tracking link doesn't exist." };
 
-  await db.insert(leads).values({
-    orgId: user.orgId,
-    assignedTo: user.id,
-    publicToken: generatePublicToken(),
-    trackingLinkId,
-    ...parsed.data,
-  });
+  const [created] = await db
+    .insert(leads)
+    .values({
+      orgId: user.orgId,
+      assignedTo: user.id,
+      publicToken: generatePublicToken(),
+      trackingLinkId,
+      ...parsed.data,
+    })
+    .returning({ id: leads.id });
+  await recordStageChange({ orgId: user.orgId, leadId: created.id, from: null, to: "new", changedBy: user.id });
 
   revalidatePath("/leads");
   return { error: null };
@@ -66,13 +71,8 @@ export async function updateLeadStage(
 ) {
   const user = await requireUser();
 
-  const [updated] = await db
-    .update(leads)
-    .set({ stage, updatedAt: new Date() })
-    .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)))
-    .returning({ id: leads.id });
-
-  if (!updated) return;
+  const changed = await changeLeadStage({ orgId: user.orgId, leadId, to: stage, changedBy: user.id });
+  if (!changed) return;
 
   await db.insert(leadActivities).values({
     leadId,
@@ -229,8 +229,9 @@ export async function convertLeadToCustomer(
 
   await db
     .update(leads)
-    .set({ customerId: customer.id, stage: "booked", updatedAt: new Date() })
+    .set({ customerId: customer.id, updatedAt: new Date() })
     .where(eq(leads.id, leadId));
+  await changeLeadStage({ orgId: user.orgId, leadId, to: "booked", changedBy: user.id });
 
   await db.insert(leadActivities).values({
     leadId,
@@ -305,10 +306,19 @@ export async function assignVehicleToLead(leadId: string, vehicleId: string) {
     nextVehicleId = vehicle.id;
   }
 
-  await db
+  const [updated] = await db
     .update(leads)
     .set({ vehicleId: nextVehicleId, updatedAt: new Date() })
-    .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)));
+    .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)))
+    .returning({ stage: leads.stage });
+
+  if (updated?.stage === "booked" && nextVehicleId) {
+    await db
+      .update(vehicles)
+      .set({ status: "rented", updatedAt: new Date() })
+      .where(and(eq(vehicles.id, nextVehicleId), eq(vehicles.status, "available")));
+    revalidatePath("/vehicles");
+  }
 
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/leads");

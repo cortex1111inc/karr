@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { invoiceItems, invoices, paymentMethodEnum } from "@/db/schema";
 import { requireOwner, requireUser } from "@/lib/auth";
 import { applyPayment, removePayment } from "@/lib/billing/payments";
+import { ownedCustomerId } from "@/lib/org-refs";
 import { calculateTotals } from "@/lib/billing/money";
 import { nextDocumentNumber } from "@/lib/billing/numbering";
 import { parseLineItems } from "@/lib/billing/schema";
@@ -52,13 +53,14 @@ export async function createInvoice(_prevState: { error: string | null }, formDa
   }
 
   const totals = calculateTotals(items.data, parsed.data.gstEnabled, parsed.data.gstRate);
+  const customerId = await ownedCustomerId(user.orgId, parsed.data.customerId);
   const number = await nextDocumentNumber(user.orgId, "invoice");
 
   const [invoice] = await db
     .insert(invoices)
     .values({
       orgId: user.orgId,
-      customerId: parsed.data.customerId,
+      customerId,
       number,
       contactName: parsed.data.contactName,
       contactPhone: parsed.data.contactPhone,

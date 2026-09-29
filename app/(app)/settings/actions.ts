@@ -16,6 +16,8 @@ const settingsSchema = z.object({
     .optional()
     .transform((value) => value || null),
   staleLeadDays: z.coerce.number().int().min(1, "Must be at least 1 day").max(90, "Must be 90 days or fewer"),
+  invoiceReminderDays: z.coerce.number().int().min(1, "Must be at least 1 day").max(90, "Must be 90 days or fewer"),
+  invoiceReminderWhatsapp: z.boolean(),
 });
 
 export async function updateOrgSettings(_prevState: { error: string | null }, formData: FormData) {
@@ -29,6 +31,8 @@ export async function updateOrgSettings(_prevState: { error: string | null }, fo
     serviceIntervalDays: formData.get("serviceIntervalDays"),
     reminderMessage: formData.get("reminderMessage"),
     staleLeadDays: formData.get("staleLeadDays"),
+    invoiceReminderDays: formData.get("invoiceReminderDays"),
+    invoiceReminderWhatsapp: formData.get("invoiceReminderWhatsapp") === "on",
   });
 
   if (!parsed.success) {

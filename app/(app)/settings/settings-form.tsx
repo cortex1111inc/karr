@@ -13,10 +13,14 @@ export function SettingsForm({
   serviceIntervalDays,
   reminderMessage,
   staleLeadDays,
+  invoiceReminderDays,
+  invoiceReminderWhatsapp,
 }: {
   serviceIntervalDays: number;
   reminderMessage: string | null;
   staleLeadDays: number;
+  invoiceReminderDays: number;
+  invoiceReminderWhatsapp: boolean;
 }) {
   const [state, formAction, pending] = useActionState(updateOrgSettings, initialState);
   useActionToast(state, pending, "Settings saved");
@@ -61,6 +65,27 @@ export function SettingsForm({
         />
         <p className="mt-1 text-xs text-faint">
           Leads with no updates for this long get an in-app notification for whoever&apos;s assigned (or you, if unassigned).
+          Still untouched after twice as long, you get notified too.
+        </p>
+      </div>
+
+      <div>
+        <Label htmlFor="invoiceReminderDays">Chase unpaid invoices after (days since issue)</Label>
+        <Input
+          id="invoiceReminderDays"
+          name="invoiceReminderDays"
+          type="number"
+          min={1}
+          max={90}
+          defaultValue={invoiceReminderDays}
+          className="w-28"
+        />
+        <label className="mt-2 flex items-center gap-2 text-sm">
+          <input type="checkbox" name="invoiceReminderWhatsapp" defaultChecked={invoiceReminderWhatsapp} className="size-4 accent-accent" />
+          Also WhatsApp the customer a payment reminder with the invoice link
+        </label>
+        <p className="mt-1 text-xs text-faint">
+          You get an in-app notification for each overdue invoice; customer reminders repeat at most once per this interval.
         </p>
       </div>
 
