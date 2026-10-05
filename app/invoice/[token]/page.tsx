@@ -8,6 +8,8 @@ import { getIntegration } from "@/lib/integrations";
 import { DocumentView } from "@/components/billing/document-view";
 import { PayButton } from "./pay-button";
 
+export const metadata = { title: "Invoice" };
+
 export default async function PublicInvoicePage({
   params,
   searchParams,

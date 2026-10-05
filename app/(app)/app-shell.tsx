@@ -40,6 +40,12 @@ export function AppShell({
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-background lg:flex-row">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:shadow-lg"
+      >
+        Skip to content
+      </a>
       <aside className="sticky top-0 hidden h-dvh w-60 flex-none flex-col gap-6 overflow-y-auto border-r border-border bg-surface px-4 py-5 lg:flex">
         <Link href="/dashboard" className="px-2">
           <Logo />
@@ -102,7 +108,9 @@ export function AppShell({
         </div>
       </dialog>
 
-      <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+      <main id="main" tabIndex={-1} className="flex min-w-0 flex-1 flex-col outline-none">
+        {children}
+      </main>
     </div>
   );
 }

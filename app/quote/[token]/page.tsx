@@ -6,6 +6,8 @@ import { documentOrg } from "@/lib/billing/document-org";
 import { DocumentView } from "@/components/billing/document-view";
 import { QuoteResponse } from "./quote-response";
 
+export const metadata = { title: "Quotation" };
+
 export default async function PublicQuotationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
 

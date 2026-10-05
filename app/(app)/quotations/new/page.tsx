@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { QuotationForm } from "./quotation-form";
 
+export const metadata = { title: "New quotation" };
+
 export default async function NewQuotationPage({
   searchParams,
 }: {

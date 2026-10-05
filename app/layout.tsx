@@ -20,7 +20,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vanspire OS",
+  title: { default: "Vanspire OS", template: "%s · Vanspire OS" },
   description: "CRM, lead management, retention and billing for automotive businesses.",
 };
 

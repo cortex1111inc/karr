@@ -6,7 +6,7 @@
   --surface-2: #f3f1e9;
   --foreground: #14140f;
   --muted: #625f52;
-  --faint: #9a978a;
+  --faint: #6f6c5f; /* ≥4.5:1 on every surface; was #9a978a (2.6:1) */
   --border: #e9e5d9;
   --border-strong: #d9d4c3;
   --accent: #78bb45;
@@ -46,4 +46,23 @@ body {
 ::selection {
   background: var(--accent-soft);
   color: var(--foreground);
+}
+
+/* Keyboard focus: unlayered so it beats Tailwind's outline-none utilities.
+   Inputs also change border colour; this guarantees buttons and links show it. */
+:focus-visible {
+  outline: 2px solid var(--accent-deep);
+  outline-offset: 2px;
+}
+
+/* Honour reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

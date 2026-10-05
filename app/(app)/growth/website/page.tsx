@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { CopyLinkButton } from "@/components/ui/copy-link-button";
 import { SiteForm } from "./site-form";
 
+export const metadata = { title: "Website" };
+
 export default async function WebsiteEditorPage() {
   const user = await requireUser();
   const [[org], [site]] = await Promise.all([

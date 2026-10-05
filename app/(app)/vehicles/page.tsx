@@ -12,6 +12,8 @@ import { VehicleStatusSelect } from "./vehicle-status-select";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 import { EmptyState } from "@/components/ui/empty-state";
 
+export const metadata = { title: "Vehicles" };
+
 const STATUS_TONE: Record<string, "neutral" | "accent" | "danger"> = {
   available: "accent",
   rented: "neutral",

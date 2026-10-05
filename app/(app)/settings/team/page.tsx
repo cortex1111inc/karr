@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { InviteForm } from "./invite-form";
 import { RemoveButton } from "./remove-button";
 
+export const metadata = { title: "Team" };
+
 export default async function TeamPage() {
   const user = await requireUser();
 

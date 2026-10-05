@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 
+export const metadata = { title: "Audit log" };
+
 export default async function AuditLogPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const user = await requireOwner();
   const page = parsePage((await searchParams).page);

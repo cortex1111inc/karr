@@ -9,6 +9,8 @@ import { Select } from "@/components/ui/input";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 
+export const metadata = { title: "Growth" };
+
 export default async function GrowthPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
   const user = await requireUser();
   const org = user.orgId;

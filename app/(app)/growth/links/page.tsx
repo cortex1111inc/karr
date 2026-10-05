@@ -15,6 +15,8 @@ import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 import { NewLinkDialog } from "./new-link-dialog";
 import { ArchiveButton } from "./archive-button";
 
+export const metadata = { title: "Tracking links" };
+
 export default async function TrackingLinksPage({ searchParams }: { searchParams: Promise<{ page?: string; archived?: string }> }) {
   const user = await requireUser();
   const params = await searchParams;

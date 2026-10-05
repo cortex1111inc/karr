@@ -10,6 +10,8 @@ import { SettingsForm } from "./settings-form";
 import { BillingSettingsForm } from "./billing-settings-form";
 import { CopyLinkButton } from "@/components/ui/copy-link-button";
 
+export const metadata = { title: "Settings" };
+
 export default async function SettingsPage() {
   const user = await requireUser();
 

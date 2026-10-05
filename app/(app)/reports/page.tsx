@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { BarChart } from "@/components/ui/bar-chart";
 import { Delta } from "@/components/ui/delta";
 
+export const metadata = { title: "Reports" };
+
 const DAY_MS = 86_400_000;
 
 type Totals = { leads: number; booked: number; revenue: number };

@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { InvoiceForm } from "./invoice-form";
 
+export const metadata = { title: "New invoice" };
+
 export default async function NewInvoicePage({
   searchParams,
 }: {

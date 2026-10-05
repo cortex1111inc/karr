@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 
+export const metadata = { title: "Fleet calendar" };
+
 const DAY_MS = 86_400_000;
 
 // Dates are handled as UTC YYYY-MM-DD strings, matching the `date` columns.

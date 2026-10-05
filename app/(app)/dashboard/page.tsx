@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Delta } from "@/components/ui/delta";
 import { GettingStarted, type Step } from "./getting-started";
 
+export const metadata = { title: "Dashboard" };
+
 const DAY = 24 * 60 * 60 * 1000;
 const ATTENTION_LIMIT = 5;
 

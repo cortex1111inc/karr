@@ -8,6 +8,8 @@ import { NotificationRow } from "./notification-row";
 import { MarkAllReadButton } from "./mark-all-read-button";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 
+export const metadata = { title: "Notifications" };
+
 export default async function NotificationsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const user = await requireUser();
   const page = parsePage((await searchParams).page);

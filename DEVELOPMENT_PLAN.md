@@ -345,11 +345,11 @@ Keep the established pattern (`README.md` → Integrations): typed provider inte
 
 ## WS13 — Accessibility & polish
 
-- [ ] Every form input has a `<label>` (most do via `Label`), errors linked with `aria-describedby`, `role="alert"` already used for form errors — keep consistent.
-- [ ] Visible focus styles on all interactive elements (`Button`, `Select`, links in lists); dialogs trap focus and return it on close (native `<dialog>` mostly handles this — verify).
-- [ ] Status badges don't rely on color alone (they include text — keep it that way).
-- [ ] Color contrast check on `text-faint` (`#9a978a` on `#fbfaf6` is likely below 4.5:1 for body text — use `text-muted` for anything meaningful).
-- [ ] `lang`, page `<title>`s per route via `metadata`.
+- [x] Every form input has a `<label>` (most do via `Label`), errors linked with `aria-describedby`, `role="alert"` already used for form errors — keep consistent.
+- [x] *(global `:focus-visible` ring; also skip link, `<main>` landmark, reduced-motion)* Visible focus styles on all interactive elements (`Button`, `Select`, links in lists); dialogs trap focus and return it on close (native `<dialog>` mostly handles this — verify).
+- [x] Status badges don't rely on color alone (they include text — keep it that way).
+- [x] Color contrast check on `text-faint` *(measured 2.6:1; now `#6f6c5f` ≥4.6:1 on every surface)* (`#9a978a` on `#fbfaf6` is likely below 4.5:1 for body text — use `text-muted` for anything meaningful).
+- [x] `lang`, page `<title>`s per route via `metadata`.
 
 ---
 

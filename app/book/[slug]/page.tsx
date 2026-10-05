@@ -5,6 +5,8 @@ import { organizations } from "@/db/schema";
 import { Card } from "@/components/ui/card";
 import { BookingForm } from "./booking-form";
 
+export const metadata = { title: "Book a slot" };
+
 export default async function PublicBookingPage({
   params,
   searchParams,

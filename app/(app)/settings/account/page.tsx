@@ -7,6 +7,8 @@ import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { NameForm, NotificationPrefsForm, PasswordChangeForm, SignOutEverywhereButton } from "./account-forms";
 
+export const metadata = { title: "Your account" };
+
 export default async function AccountPage() {
   const user = await requireUser();
   const [profile] = await db

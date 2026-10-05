@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { AuthCard } from "@/components/layout/auth-card";
 import { OnboardingForm } from "./onboarding-form";
 
+export const metadata = { title: "Set up your workspace" };
+
 // Reached when someone is signed in but has no workspace yet — typically
 // right after confirming their signup email. Deliberately not using
 // requireUser(), which is what redirects here in the first place.

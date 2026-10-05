@@ -1,6 +1,8 @@
 import { AuthCard } from "@/components/layout/auth-card";
 import { PasswordForm } from "./password-form";
 
+export const metadata = { title: "Set a new password" };
+
 // Requires a session (not in PUBLIC_PATHS): the emailed link goes through
 // /auth/callback, which signs the person in before sending them here.
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {

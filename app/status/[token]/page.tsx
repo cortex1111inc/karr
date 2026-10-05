@@ -5,6 +5,8 @@ import { leads, organizations } from "@/db/schema";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+export const metadata = { title: "Booking status" };
+
 const STAGE_COPY: Record<string, { label: string; hint: string }> = {
   new: { label: "Received", hint: "We've got your enquiry and will be in touch shortly." },
   contacted: { label: "In progress", hint: "We're working on your request." },

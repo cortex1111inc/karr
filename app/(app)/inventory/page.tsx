@@ -10,6 +10,8 @@ import { NewStockItemDialog } from "./new-stock-item-dialog";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 import { EmptyState } from "@/components/ui/empty-state";
 
+export const metadata = { title: "Inventory" };
+
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const user = await requireUser();
   const page = parsePage((await searchParams).page);

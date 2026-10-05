@@ -10,6 +10,8 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PAGE_SIZE, Pagination, parsePage } from "@/components/ui/pagination";
 
+export const metadata = { title: "Customers" };
+
 export default async function CustomersPage({
   searchParams,
 }: {

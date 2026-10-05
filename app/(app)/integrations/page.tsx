@@ -11,6 +11,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DisconnectButton, EmailForm, RazorpayForm, TemplatesForm, TestButton, WhatsAppForm } from "./integration-forms";
 
+export const metadata = { title: "Integrations" };
+
 type Status = "connected" | "shared" | "none";
 
 function StatusBadge({ status }: { status: Status }) {

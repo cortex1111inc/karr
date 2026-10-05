@@ -3,6 +3,8 @@ import { AuthCard } from "@/components/layout/auth-card";
 import { safeNextPath } from "@/lib/redirects";
 import { LoginForm } from "./login-form";
 
+export const metadata = { title: "Sign in" };
+
 const ERRORS: Record<string, string> = {
   link: "That link has expired or was already used. Sign in, or request a new one.",
 };

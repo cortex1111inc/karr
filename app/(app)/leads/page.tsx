@@ -7,6 +7,8 @@ import { PipelineBoard } from "./pipeline-board";
 import { NewLeadDialog } from "./new-lead-dialog";
 import { LeadFilters } from "./lead-filters";
 
+export const metadata = { title: "Leads" };
+
 // A board can't paginate the way a list does; cap it and ask for filters instead.
 const BOARD_LIMIT = 300;
 
