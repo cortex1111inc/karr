@@ -316,11 +316,11 @@ Keep the established pattern (`README.md` → Integrations): typed provider inte
 
 ## WS10 — Business intelligence upgrades
 
-- [ ] Rebuild conversion metrics on `lead_stage_changes` (WS7): true point-in-time funnel (new → contacted → quoted → booked), time-to-convert, drop-off per stage. Keep the old approximation labelled for periods before history existed.
-- [ ] Add a lightweight chart component (bars/line) — no heavy library unless justified — for revenue trend and lead volume.
-- [ ] Previous-period comparison deltas on every KPI.
-- [ ] Date-range-filtered CSV export as an *additional* option (current full export stays — see `CLAUDE.md`).
-- [ ] Outstanding receivables report (sum of `total - amountPaid` for `sent`/`partial`, aging buckets 0–30/31–60/60+).
+- [x] Rebuild conversion metrics on `lead_stage_changes` (WS7): true point-in-time funnel (new → contacted → quoted → booked), time-to-convert, drop-off per stage. Keep the old approximation labelled for periods before history existed.
+- [x] Add a lightweight chart component (bars/line) — no heavy library unless justified — for revenue trend and lead volume.
+- [x] Previous-period comparison deltas on every KPI.
+- [x] Date-range-filtered CSV export as an *additional* option (current full export stays — see `CLAUDE.md`).
+- [x] Outstanding receivables report (sum of `total - amountPaid` for `sent`/`partial`, aging buckets 0–30/31–60/60+).
 
 ---
 

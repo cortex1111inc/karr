@@ -4,7 +4,11 @@ export type CsvColumn<T> = { key: keyof T; label: string };
 
 function escapeCell(value: unknown): string {
   if (value === null || value === undefined) return "";
-  const str = value instanceof Date ? value.toISOString() : String(value);
+  let str = value instanceof Date ? value.toISOString() : String(value);
+  // Customer-typed text (names, enquiries from the public booking form)
+  // starting with = + - @ would run as a formula in Excel/Sheets.
+  // Plain numbers (numeric columns arrive as strings, e.g. "-100.00") are safe.
+  if (typeof value === "string" && /^[=+\-@\t\r]/.test(str) && !/^-?\d+(\.\d+)?$/.test(str)) str = `'${str}`;
   return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 }
 

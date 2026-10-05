@@ -8,23 +8,11 @@ import { formatCurrency } from "@/lib/billing/money";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Delta } from "@/components/ui/delta";
 import { GettingStarted, type Step } from "./getting-started";
 
 const DAY = 24 * 60 * 60 * 1000;
 const ATTENTION_LIMIT = 5;
-
-function Delta({ current, previous, format = (n: number) => String(n) }: { current: number; previous: number; format?: (n: number) => string }) {
-  if (previous === 0 && current === 0) return <span className="text-xs text-faint">No change</span>;
-  if (previous === 0) return <span className="text-xs text-accent-deep">New this period</span>;
-  const change = ((current - previous) / previous) * 100;
-  const up = change >= 0;
-  return (
-    <span className={cn("text-xs", up ? "text-accent-deep" : "text-danger")}>
-      {up ? "▲" : "▼"} {Math.abs(change).toFixed(0)}% <span className="text-faint">vs {format(previous)}</span>
-    </span>
-  );
-}
 
 export default async function DashboardPage() {
   const user = await requireUser();
