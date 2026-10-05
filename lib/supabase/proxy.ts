@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   "/site",
   "/r",
   "/api/cron",
+  "/api/health",
   // Authenticated by provider signatures inside each route.
   "/api/webhooks",
 ];

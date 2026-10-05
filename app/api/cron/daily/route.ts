@@ -5,6 +5,7 @@ import { customers, invoices, leads, organizations, profiles, rateLimits, stockI
 import { formatCurrency } from "@/lib/billing/money";
 import { getSiteUrl } from "@/lib/site";
 import { returnFinishedRentals } from "@/lib/rentals";
+import { log } from "@/lib/log";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { renderReminderMessage } from "@/lib/whatsapp/templates";
 import { notify } from "@/lib/notifications";
@@ -316,5 +317,6 @@ export async function GET(request: NextRequest) {
   const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   await db.delete(rateLimits).where(lt(rateLimits.windowStart, cutoff));
 
+  log.info("cron_daily", { ...results, ms: Date.now() - now.getTime() });
   return NextResponse.json(results);
 }

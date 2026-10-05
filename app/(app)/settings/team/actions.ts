@@ -8,6 +8,7 @@ import { profiles } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSiteUrl } from "@/lib/site";
+import { audit } from "@/lib/audit";
 
 const inviteSchema = z.object({
   email: z.string().trim().email("Enter a valid email"),
@@ -54,6 +55,7 @@ export async function inviteTeammate(_prevState: { error: string | null }, formD
     email: parsed.data.email,
     role: parsed.data.role,
   });
+  await audit(user, { action: "team.invite", targetType: "profile", targetId: data.user.id, summary: `Invited ${parsed.data.fullName} as ${parsed.data.role}` });
 
   revalidatePath("/settings/team");
   return { error: null };
@@ -67,8 +69,9 @@ export async function removeTeammate(profileId: string) {
   const removed = await db
     .delete(profiles)
     .where(and(eq(profiles.id, profileId), eq(profiles.orgId, user.orgId)))
-    .returning({ id: profiles.id });
+    .returning({ id: profiles.id, name: profiles.fullName });
   if (removed.length === 0) return;
+  await audit(user, { action: "team.remove", targetType: "profile", targetId: profileId, summary: `Removed ${removed[0].name} from the workspace` });
 
   // Each login belongs to exactly one workspace, so removing someone also
   // deletes their login — otherwise they could still sign in (and would be

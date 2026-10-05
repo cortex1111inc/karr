@@ -728,3 +728,22 @@ export const emailMessages = pgTable(
   },
   (table) => [index("email_messages_org_idx").on(table.orgId)],
 );
+
+// Append-only record of sensitive owner/staff actions (integration changes,
+// team changes, voiding/deleting financial records). Written by
+// lib/audit.ts; read on /settings/audit.
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    actorId: uuid("actor_id"),
+    actorName: text("actor_name"),
+    action: text("action").notNull(),
+    targetType: text("target_type"),
+    targetId: text("target_id"),
+    summary: text("summary").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("audit_log_org_created_idx").on(table.orgId, table.createdAt.desc())],
+);

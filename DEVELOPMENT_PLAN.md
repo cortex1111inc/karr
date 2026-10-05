@@ -326,11 +326,11 @@ Keep the established pattern (`README.md` → Integrations): typed provider inte
 
 ## WS11 — Observability, backups, operations
 
-- [ ] **Error monitoring (D7)**: Sentry for Next.js — check the current SDK's Next 16 / `proxy.ts` support in their docs before installing. Capture server action errors and route handler errors; scrub PII (phone numbers, emails) before send.
-- [ ] Structured logging helper; log every cron run's result object.
-- [ ] `/api/health` (public, no data): DB reachability check for uptime monitoring.
-- [ ] **Backups**: Supabase free tier has no point-in-time recovery. Minimum viable: a scheduled GitHub Action running `pg_dump` against a read-only role, storing encrypted artifacts with a retention limit — or upgrade the Supabase plan. Document restore steps in `db/BACKUPS.md` and **test a restore** into a scratch DB.
-- [ ] Audit log for sensitive owner actions (integration changes, team changes, invoice void/delete).
+- [~] **Error monitoring (D7)** *(partial: `instrumentation.ts#onRequestError` logs every server error as scrubbed JSON; Sentry itself needs your account/DSN — steps in `db/OPERATIONS.md`)*: Sentry for Next.js — check the current SDK's Next 16 / `proxy.ts` support in their docs before installing. Capture server action errors and route handler errors; scrub PII (phone numbers, emails) before send.
+- [x] Structured logging helper; log every cron run's result object.
+- [x] `/api/health` (public, no data): DB reachability check for uptime monitoring.
+- [~] **Backups** *(documented with restore steps in `db/OPERATIONS.md`; scheduled Action waits on where you want dumps stored; restore test not yet run)*: Supabase free tier has no point-in-time recovery. Minimum viable: a scheduled GitHub Action running `pg_dump` against a read-only role, storing encrypted artifacts with a retention limit — or upgrade the Supabase plan. Document restore steps in `db/BACKUPS.md` and **test a restore** into a scratch DB.
+- [x] Audit log for sensitive owner actions (integration changes, team changes, invoice void/delete).
 
 ---
 

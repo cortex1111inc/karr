@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { vehicleStatusEnum, vehicles } from "@/db/schema";
 import { requireOwner, requireUser } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 
 const vehicleSchema = z.object({
   registrationNumber: z.string().trim().min(1, "Registration number is required"),
@@ -103,7 +104,11 @@ export async function updateVehicleStatus(vehicleId: string, status: (typeof veh
 export async function deleteVehicle(vehicleId: string) {
   const user = await requireOwner();
 
-  await db.delete(vehicles).where(and(eq(vehicles.id, vehicleId), eq(vehicles.orgId, user.orgId)));
+  const [gone] = await db
+    .delete(vehicles)
+    .where(and(eq(vehicles.id, vehicleId), eq(vehicles.orgId, user.orgId)))
+    .returning({ reg: vehicles.registrationNumber });
+  if (gone) await audit(user, { action: "vehicle.delete", targetType: "vehicle", targetId: vehicleId, summary: `Deleted vehicle ${gone.reg}` });
 
   revalidatePath("/vehicles");
 }

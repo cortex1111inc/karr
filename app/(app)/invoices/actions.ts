@@ -12,6 +12,7 @@ import { createInvoiceRecord, moveInvoiceStock } from "@/lib/billing/invoices";
 import { applyPayment, removePayment, syncInvoicePaymentStatus } from "@/lib/billing/payments";
 import { ownedCustomerId } from "@/lib/org-refs";
 import { parseLineItems } from "@/lib/billing/schema";
+import { audit } from "@/lib/audit";
 
 const invoiceSchema = z.object({
   contactName: z.string().trim().min(1, "Name is required"),
@@ -96,6 +97,9 @@ export async function updateInvoiceStatus(invoiceId: string, status: "draft" | "
     .update(invoices)
     .set({ status, updatedAt: new Date() })
     .where(and(eq(invoices.id, invoiceId), eq(invoices.orgId, user.orgId)));
+  if (status === "void" || leavingVoid) {
+    await audit(user, { action: status === "void" ? "invoice.void" : "invoice.unvoid", targetType: "invoice", targetId: invoiceId, summary: `${status === "void" ? "Voided" : "Reinstated"} an invoice` });
+  }
   // Un-voiding an invoice that had payments: re-derive partial/paid.
   if (leavingVoid) await syncInvoicePaymentStatus(invoiceId);
 
@@ -116,6 +120,7 @@ export async function deleteInvoice(invoiceId: string) {
   if (invoice?.status !== "draft") return;
 
   await moveInvoiceStock({ orgId: user.orgId, invoiceId, direction: "return", createdBy: user.id });
+  await audit(user, { action: "invoice.delete", targetType: "invoice", targetId: invoiceId, summary: "Deleted a draft invoice" });
   await db
     .delete(invoices)
     .where(and(eq(invoices.id, invoiceId), eq(invoices.orgId, user.orgId), eq(invoices.status, "draft")));
@@ -166,6 +171,7 @@ export async function deletePayment(paymentId: string, invoiceId: string) {
   const user = await requireOwner();
 
   if (!(await removePayment(user.orgId, invoiceId, paymentId))) return;
+  await audit(user, { action: "payment.delete", targetType: "payment", targetId: paymentId, summary: "Deleted a recorded payment" });
 
   revalidatePath(`/invoices/${invoiceId}`);
   revalidatePath("/invoices");

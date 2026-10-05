@@ -5,7 +5,8 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { integrations, profiles } from "@/db/schema";
-import { requireUser } from "@/lib/auth";
+import { requireUser, type CurrentUser } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 import { encryptSecret } from "@/lib/crypto";
 import { sendEmail } from "@/lib/email";
 import { getIntegration, type IntegrationProvider, type WhatsAppSettings } from "@/lib/integrations";
@@ -23,7 +24,7 @@ function encryptOrKeep(value: string | undefined, existing: string | null | unde
 }
 
 async function upsert(
-  orgId: string,
+  user: CurrentUser,
   provider: IntegrationProvider,
   values: {
     phoneNumberId?: string | null;
@@ -33,6 +34,7 @@ async function upsert(
   },
 ) {
   const now = new Date();
+  const orgId = user.orgId;
   await db
     .insert(integrations)
     .values({ orgId, provider, ...values, connectedAt: now, updatedAt: now })
@@ -40,6 +42,7 @@ async function upsert(
       target: [integrations.orgId, integrations.provider],
       set: { ...values, connectedAt: now, updatedAt: now },
     });
+  await audit(user, { action: "integration.save", targetType: "integration", targetId: provider, summary: `Saved ${provider} credentials` });
   revalidatePath("/integrations");
 }
 
@@ -69,7 +72,7 @@ export async function saveWhatsAppIntegration(_prev: State, formData: FormData):
   }
   if (!accessTokenEncrypted) return { error: "Access Token is required." };
 
-  await upsert(user.orgId, "whatsapp", {
+  await upsert(user, "whatsapp", {
     phoneNumberId: parsed.data.phoneNumberId,
     accessTokenEncrypted,
     settings: existing?.settings ?? {},
@@ -152,7 +155,7 @@ export async function saveEmailIntegration(_prev: State, formData: FormData): Pr
   }
   if (!accessTokenEncrypted) return { error: "API key is required." };
 
-  await upsert(user.orgId, "email", { accessTokenEncrypted, settings: { fromAddress: parsed.data.fromAddress } });
+  await upsert(user, "email", { accessTokenEncrypted, settings: { fromAddress: parsed.data.fromAddress } });
   return { error: null };
 }
 
@@ -199,7 +202,7 @@ export async function saveRazorpayIntegration(_prev: State, formData: FormData):
   if (!accessTokenEncrypted) return { error: "Key secret is required." };
   if (!secondarySecretEncrypted) return { error: "Webhook secret is required — payments can't be confirmed without it." };
 
-  await upsert(user.orgId, "razorpay", {
+  await upsert(user, "razorpay", {
     accessTokenEncrypted,
     secondarySecretEncrypted,
     settings: { keyId: parsed.data.keyId },
@@ -214,5 +217,6 @@ export async function disconnectIntegration(provider: IntegrationProvider) {
   if (user.role !== "owner") return;
   if (!["whatsapp", "email", "razorpay"].includes(provider)) return;
   await db.delete(integrations).where(and(eq(integrations.orgId, user.orgId), eq(integrations.provider, provider)));
+  await audit(user, { action: "integration.disconnect", targetType: "integration", targetId: provider, summary: `Disconnected ${provider}` });
   revalidatePath("/integrations");
 }

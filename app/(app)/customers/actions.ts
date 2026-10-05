@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
 import { requireOwner, requireUser } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 
 const updateCustomerSchema = z.object({
   fullName: z.string().trim().min(1, "Name is required"),
@@ -59,7 +60,11 @@ export async function updateCustomer(
 export async function deleteCustomer(customerId: string) {
   const user = await requireOwner();
 
-  await db.delete(customers).where(and(eq(customers.id, customerId), eq(customers.orgId, user.orgId)));
+  const [gone] = await db
+    .delete(customers)
+    .where(and(eq(customers.id, customerId), eq(customers.orgId, user.orgId)))
+    .returning({ name: customers.fullName });
+  if (gone) await audit(user, { action: "customer.delete", targetType: "customer", targetId: customerId, summary: `Deleted customer ${gone.name}` });
 
   revalidatePath("/customers");
 }

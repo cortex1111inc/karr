@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { stockItems, stockMovementTypeEnum } from "@/db/schema";
 import { requireOwner, requireUser } from "@/lib/auth";
 import { applyStockMovement } from "@/lib/inventory/stock";
+import { audit } from "@/lib/audit";
 
 const stockItemSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -91,7 +92,11 @@ export async function updateStockItem(stockItemId: string, _prevState: { error: 
 export async function deleteStockItem(stockItemId: string) {
   const user = await requireOwner();
 
-  await db.delete(stockItems).where(and(eq(stockItems.id, stockItemId), eq(stockItems.orgId, user.orgId)));
+  const [gone] = await db
+    .delete(stockItems)
+    .where(and(eq(stockItems.id, stockItemId), eq(stockItems.orgId, user.orgId)))
+    .returning({ name: stockItems.name });
+  if (gone) await audit(user, { action: "stock.delete", targetType: "stock_item", targetId: stockItemId, summary: `Deleted stock item ${gone.name}` });
 
   revalidatePath("/inventory");
 }

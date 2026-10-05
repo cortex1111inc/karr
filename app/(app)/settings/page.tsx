@@ -84,6 +84,16 @@ export default async function SettingsPage() {
             </Link>
           </Card>
 
+          {user.role === "owner" ? (
+            <Card className="p-5">
+              <h2 className="font-display text-sm font-bold">Audit log</h2>
+              <p className="mt-0.5 text-sm text-muted">Who changed integrations, removed teammates, or voided and deleted records.</p>
+              <Link href="/settings/audit" className="mt-3 inline-block text-sm font-medium text-accent-deep hover:underline">
+                View audit log →
+              </Link>
+            </Card>
+          ) : null}
+
           <Card className="p-5">
             <h2 className="font-display text-sm font-bold">Team</h2>
             <p className="mt-0.5 text-sm text-muted">Manage who has access to this workspace.</p>
