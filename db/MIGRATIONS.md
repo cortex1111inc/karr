@@ -1,5 +1,7 @@
 # Schema changes on this project
 
+**Rebuilding an empty database:** run `db/sql/000_full_schema.sql` (all tables, enums, indexes, FKs and RLS). It was generated from `db/schema.ts` and verified by building it inside a rolled-back scratch schema (24 tables, RLS on all). Any later change is a numbered file beside it (`001_description.sql`, …), applied in order, and mirrored in `db/schema.ts`. Don't commit `drizzle-kit generate` output (`db/migrations/`) — it would drift from these files. To refresh the baseline, regenerate into a temp folder, diff against `000`, and update by hand.
+
 `npm run db:push` (`drizzle-kit push`) **crashes** against this Supabase project:
 
 ```

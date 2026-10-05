@@ -103,6 +103,25 @@ All aggregation happens in JS after fetching the date-range rows (no SQL `GROUP 
 - **Micro-site** (`/growth/website` → public `/site/[orgSlug]`): headline, services with "from ₹", about, hours, address/map, WhatsApp click-to-chat, embedded booking form, 4 accent presets. Owner-entered URLs must be `https://` (`lib/growth-site-schema.ts` — they're rendered on a public page).
 - **Growth dashboard** (`/growth`): clicks, leads, booked, conversion, revenue and commission per link. Revenue attribution (`lib/growth-stats.ts`): payment → invoice's lead's link, else the link that first brought in the invoice's customer. Commission: flat ₹ per booked lead, or % of attributed revenue.
 
+## Environments & deployment
+
+One Supabase project currently serves dev and production. Before real customers, create a second project (Supabase dashboard), run `db/sql/000_full_schema.sql` in its SQL editor, and point Production at it.
+
+| Variable | Local | Preview | Production | Notes |
+| --- | --- | --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | dev project | dev project | prod project | public by design; RLS protects data |
+| `DATABASE_URL` | dev | dev | prod | direct/pooler URI of the matching project |
+| `SUPABASE_SERVICE_ROLE_KEY` | dev | dev | prod | server only |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | omit (falls back to `VERCEL_URL`) | your domain | used in every shared link |
+| `INTEGRATIONS_ENCRYPTION_KEY` | any | any | **set once, never rotate casually** | different per environment is fine; saved credentials don't move between them |
+| `CRON_SECRET` | optional | optional | **required** | Vercel sends it as a Bearer token; cron only runs on Production |
+| `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` | optional | — | required for inbound WhatsApp | webhook refuses all calls without the secret |
+| `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `RESEND_API_KEY`, `EMAIL_FROM` | optional | — | optional | shared fallbacks; per-org credentials on `/integrations` win |
+
+Custom domain checklist: add the domain in Vercel → set `NEXT_PUBLIC_APP_URL` → add it to Supabase Auth → URL Configuration (Site URL and Redirect URLs `https://<domain>/auth/callback`) → update the Meta webhook URL (`/api/webhooks/whatsapp`) and each org's Razorpay webhook URL (shown on `/integrations`).
+
+Monitoring, backups and the audit log: see `db/OPERATIONS.md`.
+
 ## Scripts
 
 | Command | What it does |

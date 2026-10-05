@@ -336,10 +336,10 @@ Keep the established pattern (`README.md` → Integrations): typed provider inte
 
 ## WS12 — Environments & deployment (D1)
 
-- [ ] If D1 = separate: create a production Supabase project, replay all schema via a consolidated SQL script built from `db/schema.ts` (write it as `db/sql/000_full_schema.sql`, RLS included), point Vercel Production env vars at it, keep the current project for Preview/dev.
-- [ ] Consolidate the migration story: now that schema is stable, generate a baseline with `npm run db:generate` (it doesn't touch the DB, so it works despite the `db:push` bug) and keep hand-applied SQL files numbered under `db/sql/` going forward, so a new environment can be rebuilt deterministically.
-- [ ] Vercel: env var matrix per environment (table in `README.md`), cron only on Production, preview deployments pointed at the non-prod DB.
-- [ ] Custom domain + update `NEXT_PUBLIC_APP_URL` and Supabase auth redirect URLs.
+- [~] *(script ready & verified; creating the second project and repointing Vercel needs you)* If D1 = separate: create a production Supabase project, replay all schema via a consolidated SQL script built from `db/schema.ts` (write it as `db/sql/000_full_schema.sql`, RLS included), point Vercel Production env vars at it, keep the current project for Preview/dev.
+- [x] Consolidate the migration story: now that schema is stable, generate a baseline with `npm run db:generate` (it doesn't touch the DB, so it works despite the `db:push` bug) and keep hand-applied SQL files numbered under `db/sql/` going forward, so a new environment can be rebuilt deterministically.
+- [x] Vercel: env var matrix per environment (table in `README.md`), cron only on Production, preview deployments pointed at the non-prod DB.
+- [~] *(checklist in README; needs your domain)* Custom domain + update `NEXT_PUBLIC_APP_URL` and Supabase auth redirect URLs.
 
 ---
 
