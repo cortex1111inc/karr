@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { requestPasswordReset, type ForgotState } from "./actions";
 
-export const metadata = { title: "Reset password" };
 
 const initialState: ForgotState = { error: null };
 
