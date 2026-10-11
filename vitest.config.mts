@@ -4,6 +4,7 @@ import { defineConfig } from "vitest/config";
 const root = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
+  esbuild: { jsx: "automatic" },
   resolve: {
     alias: [
       { find: /^@\//, replacement: `${root}/` },
@@ -12,7 +13,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["lib/**/*.test.ts", "tests/**/*.test.ts"],
+    include: ["lib/**/*.test.ts", "tests/**/*.test.{ts,tsx}"],
     exclude: ["node_modules/**", ".next/**"],
   },
 });

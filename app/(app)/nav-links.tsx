@@ -43,6 +43,7 @@ const GROUPS: { label: string | null; items: NavItem[] }[] = [
   {
     label: "Workspace",
     items: [
+      { href: "/guide", label: "Guide" },
       { href: "/integrations", label: "Integrations" },
       { href: "/settings", label: "Settings" },
     ],

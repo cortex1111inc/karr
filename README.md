@@ -122,6 +122,10 @@ Custom domain checklist: add the domain in Vercel → set `NEXT_PUBLIC_APP_URL` 
 
 Monitoring, backups and the audit log: see `db/OPERATIONS.md`.
 
+## In-app guide
+
+`/guide` (sidebar → Workspace → Guide) has three tabs: an interactive walkthrough of one rental from enquiry to repeat business, a filterable feature explorer, and a setup checklist whose ticks come from real workspace data (`lib/guide.ts`). Owners also see which server settings are missing (names only, never values) and the webhook addresses to paste into Meta and Razorpay. Copy lives in `lib/guide-content.ts`; when you add a feature, add it there too.
+
 ## Demo data
 
 `npm run db:seed-demo -- you@business.com` fills that workspace with ~3 months of believable activity (a Kochi car-rental + service business: ~100 leads with stage history, customers, a 10-car fleet with rental bookings, stock, quotations, invoices and payments, tracking links, campaigns, notifications). It refuses to run on a workspace that already has leads; add `--reset` to wipe that workspace's data first. Every phone is `+91 55555 xxxxx` (not a real mobile range), the three extra staff have no login, and the workspace is renamed "Malabar Drive & Care".
