@@ -9,7 +9,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
     <html lang="en">
       <body className="flex min-h-screen items-center justify-center bg-background px-4 font-sans text-foreground">
         <div className="max-w-sm text-center">
-          <h1 className="text-lg font-bold">Vanspire OS is having trouble</h1>
+          <h1 className="text-lg font-bold">Drivestead is having trouble</h1>
           <p className="mt-2 text-sm text-muted">Something went wrong loading the app. Please try again.</p>
           {error.digest ? <p className="mt-2 font-mono text-xs text-faint">Ref: {error.digest}</p> : null}
           <button

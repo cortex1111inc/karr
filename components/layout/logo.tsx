@@ -1,29 +1,30 @@
+import { BRAND } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
+// A "D" with a hub-dot counter: the dot reads as a wheel or headlight, the
+// letter as "drive". Same artwork as public/brand/drivestead-mark.svg and
+// app/icon.svg — keep the three in step.
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <span className={cn("flex h-7 w-7 flex-none items-center justify-center rounded-md bg-foreground", className)}>
-      <svg viewBox="0 0 24 24" fill="none" className="h-[55%] w-[55%]" aria-hidden="true">
-        <path
-          d="M3 13.5L5.2 7.8C5.5 7 6.3 6.5 7.2 6.5H16.8C17.7 6.5 18.5 7 18.8 7.8L21 13.5"
-          stroke="var(--background)"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <rect x="2.5" y="13.5" width="19" height="5" rx="1.6" stroke="var(--background)" strokeWidth="1.7" />
-        <circle cx="7" cy="18.5" r="1.3" fill="var(--background)" />
-        <circle cx="17" cy="18.5" r="1.3" fill="var(--background)" />
-      </svg>
-    </span>
+    <svg viewBox="0 0 64 64" className={cn("h-7 w-7 flex-none", className)} aria-hidden="true">
+      <rect width="64" height="64" rx="16" fill={BRAND.green} />
+      <path
+        fill="#ffffff"
+        fillRule="evenodd"
+        d="M19 14H33C45.5 14 53 22.2 53 32S45.5 50 33 50H19ZM28 22.5H32.5C38.4 22.5 42.5 26.4 42.5 32S38.4 41.5 32.5 41.5H28Z"
+      />
+      <circle cx="35" cy="32" r="4.2" fill={BRAND.lime} />
+    </svg>
   );
 }
 
-export function Logo() {
+export function Logo({ className, size = "md" }: { className?: string; size?: "md" | "lg" }) {
   return (
-    <span className="flex items-center gap-2">
-      <LogoMark />
-      <span className="font-display text-sm font-bold">Vanspire OS</span>
+    <span className={cn("flex items-center gap-2", className)}>
+      <LogoMark className={size === "lg" ? "h-9 w-9" : undefined} />
+      <span className={cn("font-display font-bold tracking-tight", size === "lg" ? "text-xl" : "text-sm")}>
+        Drive<span className="text-accent-deep">stead</span>
+      </span>
     </span>
   );
 }

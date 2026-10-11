@@ -24,7 +24,7 @@ export default async function LoginPage({
   const notice = params.notice ? NOTICES[params.notice] : undefined;
 
   return (
-    <AuthCard title="Vanspire OS" subtitle="Sign in to your workspace">
+    <AuthCard title="Welcome back" subtitle="Sign in to your workspace">
       {error ? (
         <p role="alert" className="mb-4 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
           {error}

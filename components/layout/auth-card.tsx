@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { LogoMark } from "@/components/layout/logo";
 
@@ -7,7 +8,9 @@ export function AuthCard({ title, subtitle, children }: { title: string; subtitl
     <main className="flex min-h-full flex-1 items-center justify-center bg-surface-2 px-4 py-12 sm:px-6 sm:py-16">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
-          <LogoMark className="h-9 w-9 rounded-lg" />
+          <Link href="/" aria-label="Drivestead home">
+            <LogoMark className="h-10 w-10" />
+          </Link>
           <h1 className="font-display text-xl font-bold text-balance">{title}</h1>
           {subtitle ? <p className="text-sm text-muted">{subtitle}</p> : null}
         </div>

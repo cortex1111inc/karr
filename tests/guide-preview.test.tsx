@@ -1,7 +1,7 @@
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { FLOW } from "@/lib/guide-content";
-import { Preview } from "@/app/(app)/guide/flow-simulator";
+import { Preview } from "@/app/app/guide/flow-simulator";
 
 const base = { interState: false, accepted: false, clash: false, invoiced: false, paid: false };
 const all = { interState: true, accepted: true, clash: true, invoiced: true, paid: true };

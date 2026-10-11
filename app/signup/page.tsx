@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AuthCard } from "@/components/layout/auth-card";
 import { SignupForm } from "./signup-form";
 
-export const metadata: Metadata = { title: "Create your workspace — Vanspire OS" };
+export const metadata: Metadata = { title: "Create your workspace" };
 
 export default function SignupPage() {
   return (

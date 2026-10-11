@@ -697,19 +697,19 @@ async function main() {
   type Uuid = `${string}-${string}-${string}-${string}-${string}`;
   const openLeads = plans.filter((p) => p.stage === "contacted" || p.stage === "quoted");
   for (const p of openLeads.filter((x) => x.followUpAt && x.followUpAt <= NOW).slice(0, 4)) {
-    notes.push({ orgId, profileId: owner.id, kind: "follow_up_due", title: `Follow up with ${p.contactName}`, body: `Follow-up was due ${p.followUpAt!.toLocaleDateString()}.`, link: `/leads/${p.id}`, sourceType: "lead", sourceId: p.id as Uuid, createdAt: addMs(NOW, -int(1, 20) * 3_600_000) });
+    notes.push({ orgId, profileId: owner.id, kind: "follow_up_due", title: `Follow up with ${p.contactName}`, body: `Follow-up was due ${p.followUpAt!.toLocaleDateString()}.`, link: `/app/leads/${p.id}`, sourceType: "lead", sourceId: p.id as Uuid, createdAt: addMs(NOW, -int(1, 20) * 3_600_000) });
   }
   for (const p of openLeads.filter((x) => NOW.getTime() - x.lastTouch.getTime() > 6 * DAY).slice(0, 3)) {
-    notes.push({ orgId, profileId: owner.id, kind: "stale_lead", title: `${p.contactName} hasn't been touched in a while`, body: "No updates in 5+ days — give them a nudge.", link: `/leads/${p.id}`, sourceType: "lead", sourceId: p.id as Uuid, readAt: chance(0.4) ? NOW : null, createdAt: addMs(NOW, -int(20, 60) * 3_600_000) });
+    notes.push({ orgId, profileId: owner.id, kind: "stale_lead", title: `${p.contactName} hasn't been touched in a while`, body: "No updates in 5+ days — give them a nudge.", link: `/app/leads/${p.id}`, sourceType: "lead", sourceId: p.id as Uuid, readAt: chance(0.4) ? NOW : null, createdAt: addMs(NOW, -int(20, 60) * 3_600_000) });
   }
   for (const s of stockRows.filter((s) => stockQty.get(s.id)! <= s.lowStockThreshold)) {
-    notes.push({ orgId, profileId: owner.id, kind: "low_stock", title: `${s.name} is running low`, body: `${stockQty.get(s.id)} ${s.unit} left (alert threshold: ${s.lowStockThreshold}).`, link: `/inventory/${s.id}`, sourceType: "stock_item", sourceId: s.id as Uuid, createdAt: addMs(NOW, -int(2, 30) * 3_600_000) });
+    notes.push({ orgId, profileId: owner.id, kind: "low_stock", title: `${s.name} is running low`, body: `${stockQty.get(s.id)} ${s.unit} left (alert threshold: ${s.lowStockThreshold}).`, link: `/app/inventory/${s.id}`, sourceType: "stock_item", sourceId: s.id as Uuid, createdAt: addMs(NOW, -int(2, 30) * 3_600_000) });
   }
   for (const m of invMeta.filter((m) => (m.status === "sent" || m.status === "partial") && NOW.getTime() - m.createdAt.getTime() > 8 * DAY).slice(0, 4)) {
-    notes.push({ orgId, profileId: owner.id, kind: "invoice_overdue", title: `${m.number} is unpaid`, body: `${m.contactName} still owes ₹${round2(m.total - m.paid).toLocaleString("en-IN")}.`, link: `/invoices/${m.id}`, sourceType: "invoice", sourceId: m.id as Uuid, createdAt: addMs(NOW, -int(1, 40) * 3_600_000) });
+    notes.push({ orgId, profileId: owner.id, kind: "invoice_overdue", title: `${m.number} is unpaid`, body: `${m.contactName} still owes ₹${round2(m.total - m.paid).toLocaleString("en-IN")}.`, link: `/app/invoices/${m.id}`, sourceType: "invoice", sourceId: m.id as Uuid, createdAt: addMs(NOW, -int(1, 40) * 3_600_000) });
   }
   const accepted = quoRows.find((q) => q.status === "accepted" && q.respondedAt && NOW.getTime() - q.respondedAt.getTime() < 10 * DAY);
-  if (accepted) notes.push({ orgId, profileId: owner.id, kind: "system", title: `${accepted.contactName} accepted ${accepted.number}`, body: "No message.", link: `/quotations/${accepted.id}`, createdAt: accepted.respondedAt! });
+  if (accepted) notes.push({ orgId, profileId: owner.id, kind: "system", title: `${accepted.contactName} accepted ${accepted.number}`, body: "No message.", link: `/app/quotations/${accepted.id}`, createdAt: accepted.respondedAt! });
   if (notes.length) await db.insert(t.notifications).values(notes);
 
   await db.insert(t.auditLog).values([

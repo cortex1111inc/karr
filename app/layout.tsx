@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { BRAND } from "@/lib/brand";
+import { getSiteUrl } from "@/lib/site";
 import { Inter, Inter_Tight, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -20,8 +22,17 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Vanspire OS", template: "%s · Vanspire OS" },
-  description: "CRM, lead management, retention and billing for automotive businesses.",
+  metadataBase: new URL(getSiteUrl()),
+  applicationName: BRAND.name,
+  title: { default: `${BRAND.name} — ${BRAND.tagline}`, template: `%s · ${BRAND.name}` },
+  description: BRAND.description,
+  openGraph: {
+    type: "website",
+    siteName: BRAND.name,
+    title: `${BRAND.name} — ${BRAND.tagline}`,
+    description: BRAND.description,
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

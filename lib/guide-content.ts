@@ -26,7 +26,7 @@ export const FLOW: FlowStep[] = [
       "Leads that came through a tracking link remember which influencer or ad sent them.",
       "You get an in-app notification (and optionally an email copy).",
     ],
-    href: "/leads",
+    href: "/app/leads",
     cta: "Open leads",
   },
   {
@@ -41,7 +41,7 @@ export const FLOW: FlowStep[] = [
       "Still untouched after twice that, it is escalated to you as the workspace owner.",
       "Every stage change is recorded, so the funnel in Reports is real history.",
     ],
-    href: "/leads",
+    href: "/app/leads",
     cta: "Open the pipeline",
   },
   {
@@ -56,7 +56,7 @@ export const FLOW: FlowStep[] = [
       "Sending a quote moves a new or contacted lead to Quoted.",
       "Quote numbers are gap-free, even if two people create one at the same moment.",
     ],
-    href: "/quotations/new",
+    href: "/app/quotations/new",
     cta: "Create a quotation",
   },
   {
@@ -70,7 +70,7 @@ export const FLOW: FlowStep[] = [
       "A change request keeps the quote open and passes their message to you.",
       "The public link is unguessable, rate-limited and hidden from search engines.",
     ],
-    href: "/quotations",
+    href: "/app/quotations",
     cta: "Open quotations",
   },
   {
@@ -85,7 +85,7 @@ export const FLOW: FlowStep[] = [
       "Once every booked rental on a vehicle has ended, the nightly job sets it back to Available.",
       "Each lead has a private status link you can share with the customer.",
     ],
-    href: "/vehicles/calendar",
+    href: "/app/vehicles/calendar",
     cta: "Open the fleet calendar",
   },
   {
@@ -99,7 +99,7 @@ export const FLOW: FlowStep[] = [
       "Voiding an invoice returns the stock; reinstating it takes it again.",
       "Items falling below their alert level notify you so you can reorder.",
     ],
-    href: "/invoices/new",
+    href: "/app/invoices/new",
     cta: "Create an invoice",
   },
   {
@@ -113,7 +113,7 @@ export const FLOW: FlowStep[] = [
       "An online payment is recorded once, even if the gateway delivers it twice.",
       "Unpaid invoices nudge you after 7 days (adjustable), repeated weekly until the invoice is settled.",
     ],
-    href: "/invoices",
+    href: "/app/invoices",
     cta: "Open invoices",
   },
   {
@@ -127,7 +127,7 @@ export const FLOW: FlowStep[] = [
       "The same job flags quiet leads, unpaid invoices and low stock.",
       "Each person chooses which reminders they receive, and can get an email copy.",
     ],
-    href: "/customers",
+    href: "/app/customers",
     cta: "Open customers",
   },
   {
@@ -141,7 +141,7 @@ export const FLOW: FlowStep[] = [
       "Receivables are bucketed 0–30, 31–60 and 60+ days.",
       "Export leads and invoices as CSV, all-time or for a date range, for your accountant.",
     ],
-    href: "/reports",
+    href: "/app/reports",
     cta: "Open reports",
   },
 ];
@@ -171,7 +171,7 @@ export const FEATURES: Feature[] = [
       "Assign to a teammate, set follow-up dates, attach rental dates and a vehicle.",
       "Filter by source or stage; export everything to CSV.",
     ],
-    href: "/leads",
+    href: "/app/leads",
   },
   {
     id: "customers",
@@ -183,7 +183,7 @@ export const FEATURES: Feature[] = [
       "Next-service date drives the automatic reminders.",
       "Jump to their quotations and invoices from one place.",
     ],
-    href: "/customers",
+    href: "/app/customers",
   },
   {
     id: "quotes",
@@ -196,7 +196,7 @@ export const FEATURES: Feature[] = [
       "Email it, share the link, or print it to PDF.",
       "Convert to an invoice with one click.",
     ],
-    href: "/quotations",
+    href: "/app/quotations",
   },
   {
     id: "invoices",
@@ -209,7 +209,7 @@ export const FEATURES: Feature[] = [
       "Stock-linked lines are deducted automatically.",
       "Void an invoice to return its stock.",
     ],
-    href: "/invoices",
+    href: "/app/invoices",
   },
   {
     id: "online-pay",
@@ -221,7 +221,7 @@ export const FEATURES: Feature[] = [
       "A signed webhook records the payment against the invoice once.",
       "Connect your own Razorpay account on Integrations — keys are stored encrypted.",
     ],
-    href: "/integrations",
+    href: "/app/integrations",
     ownerOnly: true,
   },
   {
@@ -235,7 +235,7 @@ export const FEATURES: Feature[] = [
       "Overlapping bookings on one vehicle are blocked.",
       "Rental dates and the daily rate pre-fill the quotation.",
     ],
-    href: "/vehicles",
+    href: "/app/vehicles",
   },
   {
     id: "stock",
@@ -248,7 +248,7 @@ export const FEATURES: Feature[] = [
       "Counts can never go negative, even with two people working at once.",
       "Low-stock alerts reach the owner.",
     ],
-    href: "/inventory",
+    href: "/app/inventory",
   },
   {
     id: "links",
@@ -260,7 +260,7 @@ export const FEATURES: Feature[] = [
       "Flat-per-booking or percentage commission is worked out for you.",
       "Attribution is remembered for 30 days after the click.",
     ],
-    href: "/growth/links",
+    href: "/app/growth/links",
   },
   {
     id: "booking-page",
@@ -272,7 +272,7 @@ export const FEATURES: Feature[] = [
       "Each request lands in your pipeline as a new lead, spam-filtered and rate-limited.",
       "Tracking links send visitors here and remember which partner sent them.",
     ],
-    href: "/settings",
+    href: "/app/settings",
   },
   {
     id: "reports",
@@ -284,7 +284,7 @@ export const FEATURES: Feature[] = [
       "Revenue and new leads per week as charts, with change vs the previous period.",
       "Outstanding receivables by age; CSV exports for leads and invoices.",
     ],
-    href: "/reports",
+    href: "/app/reports",
   },
   {
     id: "reminders",
@@ -296,7 +296,7 @@ export const FEATURES: Feature[] = [
       "Low-stock alerts and vehicles returning to available.",
       "Safe to re-run: nothing is sent twice for the same reason on the same day.",
     ],
-    href: "/settings",
+    href: "/app/settings",
   },
   {
     id: "email",
@@ -304,7 +304,7 @@ export const FEATURES: Feature[] = [
     title: "Email",
     summary: "Email quotes and invoices to customers; alerts to staff.",
     details: ["Connect Resend with your own domain's from-address.", "A test button confirms it works before you rely on it."],
-    href: "/integrations",
+    href: "/app/integrations",
     ownerOnly: true,
   },
   {
@@ -317,7 +317,7 @@ export const FEATURES: Feature[] = [
       "Optionally get a copy by email.",
       "Unread count shows in the sidebar.",
     ],
-    href: "/settings/account",
+    href: "/app/settings/account",
   },
   {
     id: "team",
@@ -329,7 +329,7 @@ export const FEATURES: Feature[] = [
       "Only owners delete financial records, manage integrations, billing profile and the team.",
       "Removing someone also removes their login.",
     ],
-    href: "/settings/team",
+    href: "/app/settings/team",
     ownerOnly: true,
   },
   {
@@ -338,7 +338,7 @@ export const FEATURES: Feature[] = [
     title: "Billing profile",
     summary: "Your legal details, printed on every document.",
     details: ["Legal name, GSTIN, state, address, logo and payment terms.", "The state decides CGST+SGST versus IGST on each document."],
-    href: "/settings",
+    href: "/app/settings",
     ownerOnly: true,
   },
   {
@@ -350,7 +350,7 @@ export const FEATURES: Feature[] = [
       "Integration changes, team changes, voids and deletions are recorded.",
       "Owner-only page, newest first.",
     ],
-    href: "/settings/audit",
+    href: "/app/settings/audit",
     ownerOnly: true,
   },
 ];
@@ -376,10 +376,10 @@ export const SETUP: SetupPhase[] = [
     title: "1 · Basics",
     blurb: "Ten minutes, and the documents you send already look professional.",
     items: [
-      { key: "billing", title: "Fill in your billing profile", why: "Legal name, GSTIN and state appear on every quote and invoice, and decide the GST split.", href: "/settings" },
-      { key: "team", title: "Invite a teammate", why: "Give staff their own login so work can be assigned and tracked.", href: "/settings/team", optional: true },
-      { key: "vehicles", title: "Add your vehicles", why: "Needed for rentals, availability and the fleet calendar. Skip if you only do servicing.", href: "/vehicles", optional: true },
-      { key: "stock", title: "Add stock items", why: "Parts you sell or use, so invoices can deduct them. Skip if you don't track parts.", href: "/inventory", optional: true },
+      { key: "billing", title: "Fill in your billing profile", why: "Legal name, GSTIN and state appear on every quote and invoice, and decide the GST split.", href: "/app/settings" },
+      { key: "team", title: "Invite a teammate", why: "Give staff their own login so work can be assigned and tracked.", href: "/app/settings/team", optional: true },
+      { key: "vehicles", title: "Add your vehicles", why: "Needed for rentals, availability and the fleet calendar. Skip if you only do servicing.", href: "/app/vehicles", optional: true },
+      { key: "stock", title: "Add stock items", why: "Parts you sell or use, so invoices can deduct them. Skip if you don't track parts.", href: "/app/inventory", optional: true },
     ],
   },
   {
@@ -387,7 +387,7 @@ export const SETUP: SetupPhase[] = [
     title: "2 · Customer-facing",
     blurb: "Where customers meet you.",
     items: [
-      { key: "link", title: "Create a tracking link", why: "One per influencer or ad, so you can see what brings bookings.", href: "/growth/links", optional: true },
+      { key: "link", title: "Create a tracking link", why: "One per influencer or ad, so you can see what brings bookings.", href: "/app/growth/links", optional: true },
     ],
   },
   {
@@ -395,8 +395,8 @@ export const SETUP: SetupPhase[] = [
     title: "3 · Email and payments",
     blurb: "Both are optional. Without them, emails are only logged and invoices have no Pay now button.",
     items: [
-      { key: "email", title: "Connect email", why: "Email quotes and invoices, and get staff alerts by email.", href: "/integrations", optional: true },
-      { key: "payments", title: "Connect Razorpay", why: "Adds a Pay now button to every invoice link.", href: "/integrations", optional: true },
+      { key: "email", title: "Connect email", why: "Email quotes and invoices, and get staff alerts by email.", href: "/app/integrations", optional: true },
+      { key: "payments", title: "Connect Razorpay", why: "Adds a Pay now button to every invoice link.", href: "/app/integrations", optional: true },
     ],
   },
   {
@@ -404,9 +404,9 @@ export const SETUP: SetupPhase[] = [
     title: "4 · Go live",
     blurb: "Run one real job through the whole flow.",
     items: [
-      { key: "lead", title: "Log your first lead", why: "From a call, a walk-in, or the booking form.", href: "/leads" },
-      { key: "quote", title: "Send your first quotation", why: "Try the Accept button on the customer link yourself.", href: "/quotations/new" },
-      { key: "invoice", title: "Issue your first invoice", why: "Then record a payment and watch the status change.", href: "/invoices/new" },
+      { key: "lead", title: "Log your first lead", why: "From a call, a walk-in, or the booking form.", href: "/app/leads" },
+      { key: "quote", title: "Send your first quotation", why: "Try the Accept button on the customer link yourself.", href: "/app/quotations/new" },
+      { key: "invoice", title: "Issue your first invoice", why: "Then record a payment and watch the status change.", href: "/app/invoices/new" },
     ],
   },
 ];

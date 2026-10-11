@@ -21,5 +21,5 @@ export async function completeOnboarding(_prev: { error: string | null }, formDa
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form and try again." };
 
   await createWorkspace({ userId: user.id, email: user.email, ...parsed.data });
-  redirect("/dashboard");
+  redirect("/app/dashboard");
 }

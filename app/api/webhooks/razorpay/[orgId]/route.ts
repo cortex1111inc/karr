@@ -81,7 +81,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         kind: "system",
         title: `${formatCurrency(amount)} received on ${invoice.number}`,
         body: `${invoice.contactName} paid online.`,
-        link: `/invoices/${invoice.id}`,
+        link: `/app/invoices/${invoice.id}`,
       });
     }
   }

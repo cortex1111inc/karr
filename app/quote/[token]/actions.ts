@@ -57,7 +57,7 @@ export async function respondToQuotation(
           ? `${quotation.contactName} accepted ${quotation.number}`
           : `${quotation.contactName} asked for changes to ${quotation.number}`,
       body: message.data || "No message.",
-      link: `/quotations/${quotation.id}`,
+      link: `/app/quotations/${quotation.id}`,
     });
   }
 

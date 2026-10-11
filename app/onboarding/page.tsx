@@ -19,7 +19,7 @@ export default async function OnboardingPage() {
   if (!user) redirect("/login");
 
   const [profile] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, user.id)).limit(1);
-  if (profile) redirect("/dashboard");
+  if (profile) redirect("/app/dashboard");
 
   const meta = (user.user_metadata ?? {}) as { full_name?: string; business_name?: string };
 

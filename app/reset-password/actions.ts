@@ -30,5 +30,5 @@ export async function setNewPassword(_prev: { error: string | null }, formData: 
   if (error) return { error: error.message };
 
   const [profile] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, user.id)).limit(1);
-  redirect(profile ? "/dashboard" : "/onboarding");
+  redirect(profile ? "/app/dashboard" : "/onboarding");
 }

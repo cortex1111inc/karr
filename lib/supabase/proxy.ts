@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_PATHS = [
+  "/", // marketing landing page (exact match only — see isPublicPath)
   "/login",
   "/signup",
   "/forgot-password",
@@ -13,6 +14,11 @@ const PUBLIC_PATHS = [
   "/r",
   "/api/cron",
   "/api/health",
+  // Metadata routes crawlers and link previews fetch without a session.
+  "/robots.txt",
+  "/sitemap.xml",
+  "/opengraph-image",
+  "/apple-icon",
   // Authenticated by provider signatures inside each route.
   "/api/webhooks",
 ];
@@ -61,7 +67,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && SIGNED_OUT_ONLY.includes(request.nextUrl.pathname)) {
     const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = "/dashboard";
+    homeUrl.pathname = "/app/dashboard";
     homeUrl.search = "";
     return NextResponse.redirect(homeUrl);
   }

@@ -1,4 +1,4 @@
--- Vanspire OS — full schema baseline (generated from db/schema.ts on 2026-10-05
+-- Drivestead — full schema baseline (generated from db/schema.ts on 2026-10-05
 -- with `drizzle-kit generate`, plus the RLS statements drizzle does not emit).
 -- Rebuilds an empty database. Existing databases were migrated by hand; see
 -- db/MIGRATIONS.md. New changes go in db/sql/NNN_description.sql after this file.

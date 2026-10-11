@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { safeNextPath } from "./redirects";
 
 describe("safeNextPath", () => {
-  it.each(["/dashboard", "/leads/123", "/reset-password?welcome=1"])("allows same-site path %s", (p) => {
+  it.each(["/app/dashboard", "/app/leads/123", "/reset-password?welcome=1"])("allows same-site path %s", (p) => {
     expect(safeNextPath(p)).toBe(p);
   });
 
@@ -15,7 +15,7 @@ describe("safeNextPath", () => {
     ["empty", ""],
     ["non-string", null],
   ])("rejects %s", (_label, value) => {
-    expect(safeNextPath(value)).toBe("/dashboard");
+    expect(safeNextPath(value)).toBe("/app/dashboard");
   });
 
   it("uses a custom fallback", () => {

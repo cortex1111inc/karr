@@ -9,7 +9,7 @@
 - **Sentry is not installed.** It needs an account/DSN from the owner. To add it later: install `@sentry/nextjs` per its Next 16 guide, call `Sentry.captureRequestError` from `onRequestError`, and keep `beforeSend` scrubbing phone/email like `scrub()` does.
 
 ## Audit log
-Owner-visible at `/settings/audit` (`audit_log` table, RLS on). Written through `lib/audit.ts#audit()` for: integration save/disconnect, team invite/remove, invoice void/unvoid/delete, payment delete, customer/vehicle/stock deletes. Add a call for any new destructive or credential-touching action.
+Owner-visible at `/app/settings/audit` (`audit_log` table, RLS on). Written through `lib/audit.ts#audit()` for: integration save/disconnect, team invite/remove, invoice void/unvoid/delete, payment delete, customer/vehicle/stock deletes. Add a call for any new destructive or credential-touching action.
 
 ## Backups (important)
 The Supabase **free plan has no point-in-time recovery or downloadable daily backups**. Until the plan is upgraded, take your own dumps:

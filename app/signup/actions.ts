@@ -55,7 +55,7 @@ export async function signUp(_prev: SignupState, formData: FormData): Promise<Si
   // Email confirmation turned off in Supabase → we already have a session.
   if (data.session && data.user) {
     await createWorkspace({ userId: data.user.id, email, fullName, businessName });
-    redirect("/dashboard");
+    redirect("/app/dashboard");
   }
 
   return { error: null, checkEmail: email };
