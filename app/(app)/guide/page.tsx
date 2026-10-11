@@ -21,7 +21,7 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
   const isOwner = user.role === "owner";
 
   const [done, [org]] = await Promise.all([
-    getSetupStatus(user.orgId, user.id),
+    getSetupStatus(user.orgId),
     db.select({ slug: organizations.slug }).from(organizations).where(eq(organizations.id, user.orgId)).limit(1),
   ]);
   const site = getSiteUrl();
@@ -46,11 +46,6 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
               webhooks={
                 isOwner
                   ? [
-                      {
-                        label: "WhatsApp (Meta)",
-                        url: `${site}/api/webhooks/whatsapp`,
-                        where: "Meta for Developers → your app → WhatsApp → Configuration → Webhook. Use your verify token, and subscribe to “messages”.",
-                      },
                       {
                         label: "Razorpay",
                         url: `${site}/api/webhooks/razorpay/${user.orgId}`,

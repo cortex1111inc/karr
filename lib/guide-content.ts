@@ -19,12 +19,12 @@ export const FLOW: FlowStep[] = [
     title: "Enquiry arrives",
     who: "Customer",
     headline: "Every enquiry lands in one place, whichever door it came through",
-    body: "A WhatsApp message, the booking form on your website, a call you log by hand, or a click on an influencer's tracking link — each becomes a lead the moment it arrives.",
+    body: "The booking form you share online, a call you log by hand, a walk-in at the counter, or a click on an influencer's tracking link — each becomes a lead the moment it arrives.",
     automatic: [
-      "A new WhatsApp from an unknown number creates a lead; from a known customer it adds to their timeline.",
+      "Anything you log by hand is a lead in two taps: name, number, what they want.",
       "Booking-form submissions are rate-limited and spam-filtered.",
       "Leads that came through a tracking link remember which influencer or ad sent them.",
-      "You get an in-app notification (and optionally email or WhatsApp).",
+      "You get an in-app notification (and optionally an email copy).",
     ],
     href: "/leads",
     cta: "Open leads",
@@ -83,7 +83,7 @@ export const FLOW: FlowStep[] = [
       "Overlapping dates on the same vehicle are rejected with the name of the clash.",
       "A booked lead marks its vehicle Rented.",
       "Once every booked rental on a vehicle has ended, the nightly job sets it back to Available.",
-      "The customer gets a booking confirmation with a status link, on WhatsApp if connected.",
+      "Each lead has a private status link you can share with the customer.",
     ],
     href: "/vehicles/calendar",
     cta: "Open the fleet calendar",
@@ -111,7 +111,7 @@ export const FLOW: FlowStep[] = [
     automatic: [
       "Status is derived from the payments: partial, then paid — you never type 'paid'.",
       "An online payment is recorded once, even if the gateway delivers it twice.",
-      "Unpaid invoices nudge you after 7 days (adjustable), and can WhatsApp the customer the pay link.",
+      "Unpaid invoices nudge you after 7 days (adjustable), repeated weekly until the invoice is settled.",
     ],
     href: "/invoices",
     cta: "Open invoices",
@@ -120,15 +120,15 @@ export const FLOW: FlowStep[] = [
     id: "retain",
     title: "Bring them back",
     who: "Automatic",
-    headline: "Service reminders and campaigns run themselves",
-    body: "Ninety days after a visit (you choose the interval) the customer gets a friendly WhatsApp. Send a one-off campaign for an offer, up to 500 customers at a time.",
+    headline: "Customers due for a service show up on their own",
+    body: "Ninety days after a visit (you choose the interval) the customer appears in your notifications, with a link to their record — so you can call or email them and book the next visit.",
     automatic: [
-      "A daily job at 3 AM UTC sends reminders and rolls each customer's next-due date forward.",
-      "Business-initiated messages use your approved WhatsApp templates so Meta delivers them.",
-      "Every message is logged, so you can see what was sent and whether it was read.",
+      "A daily job at 3 AM UTC checks every customer and rolls their next-due date forward once you've been told.",
+      "The same job flags quiet leads, unpaid invoices and low stock.",
+      "Each person chooses which reminders they receive, and can get an email copy.",
     ],
-    href: "/campaigns",
-    cta: "Open campaigns",
+    href: "/customers",
+    cta: "Open customers",
   },
   {
     id: "measure",
@@ -167,7 +167,7 @@ export const FEATURES: Feature[] = [
     summary: "Every enquiry, its stage, its owner, its next step.",
     details: [
       "Five stages with a board view that scrolls sideways on a phone.",
-      "Notes, calls and WhatsApp messages build a timeline per lead.",
+      "Notes, calls and stage changes build a timeline per lead.",
       "Assign to a teammate, set follow-up dates, attach rental dates and a vehicle.",
       "Filter by source or stage; export everything to CSV.",
     ],
@@ -193,7 +193,7 @@ export const FEATURES: Feature[] = [
     details: [
       "GST optional, with CGST/SGST or IGST worked out for you.",
       "Optional HSN/SAC code per line and the customer's GSTIN.",
-      "Email it, WhatsApp the link, or print it to PDF.",
+      "Email it, share the link, or print it to PDF.",
       "Convert to an invoice with one click.",
     ],
     href: "/quotations",
@@ -263,28 +263,16 @@ export const FEATURES: Feature[] = [
     href: "/growth/links",
   },
   {
-    id: "site",
+    id: "booking-page",
     group: "Growth",
-    title: "Website & booking page",
-    summary: "A ready-made page with a booking form, no developer needed.",
+    title: "Booking page",
+    summary: "A public form your customers can use without an account.",
     details: [
-      "Headline, services, hours, address and accent colour — edit and publish.",
-      "The booking form feeds straight into your pipeline.",
-      "Share the link on Instagram or WhatsApp.",
+      "Share one link on Instagram or your Google profile.",
+      "Each request lands in your pipeline as a new lead, spam-filtered and rate-limited.",
+      "Tracking links send visitors here and remember which partner sent them.",
     ],
-    href: "/growth/website",
-  },
-  {
-    id: "campaigns",
-    group: "Growth",
-    title: "Campaigns",
-    summary: "A WhatsApp message to your customer list in a few clicks.",
-    details: [
-      "Personalise with the customer's name; up to 500 recipients per send.",
-      "Sent in small batches; every delivery is logged.",
-      "Uses your approved template so Meta actually delivers it.",
-    ],
-    href: "/campaigns",
+    href: "/settings",
   },
   {
     id: "reports",
@@ -304,25 +292,11 @@ export const FEATURES: Feature[] = [
     title: "Daily reminders",
     summary: "One nightly job covers everything that is time-based.",
     details: [
-      "Service reminders to customers; follow-up, stale-lead and unpaid-invoice nudges to you.",
+      "Customers due for service, follow-ups, stale leads and unpaid invoices — each as a notification to you.",
       "Low-stock alerts and vehicles returning to available.",
       "Safe to re-run: nothing is sent twice for the same reason on the same day.",
     ],
     href: "/settings",
-  },
-  {
-    id: "whatsapp",
-    group: "Automation",
-    title: "WhatsApp",
-    summary: "Send confirmations and reminders; receive enquiries as leads.",
-    details: [
-      "Connect your own WhatsApp Business number; messages are logged either way.",
-      "Map each message type to an approved template so cold outreach is delivered.",
-      "Inbound messages create or update leads; delivery and read status come back.",
-      "Without credentials everything still works and messages are only logged.",
-    ],
-    href: "/integrations",
-    ownerOnly: true,
   },
   {
     id: "email",
@@ -340,7 +314,7 @@ export const FEATURES: Feature[] = [
     summary: "An inbox for what needs you, tuned per person.",
     details: [
       "Each person chooses which kinds they receive.",
-      "Optionally forward them to email or WhatsApp.",
+      "Optionally get a copy by email.",
       "Unread count shows in the sidebar.",
     ],
     href: "/settings/account",
@@ -386,11 +360,7 @@ export type SetupKey =
   | "team"
   | "vehicles"
   | "stock"
-  | "site"
   | "link"
-  | "phone"
-  | "whatsapp"
-  | "templates"
   | "email"
   | "payments"
   | "lead"
@@ -417,18 +387,14 @@ export const SETUP: SetupPhase[] = [
     title: "2 · Customer-facing",
     blurb: "Where customers meet you.",
     items: [
-      { key: "site", title: "Publish your website page", why: "A shareable page with a booking form that feeds your pipeline.", href: "/growth/website" },
       { key: "link", title: "Create a tracking link", why: "One per influencer or ad, so you can see what brings bookings.", href: "/growth/links", optional: true },
     ],
   },
   {
     id: "connect",
-    title: "3 · Connect your channels",
-    blurb: "Everything works without these (messages are just logged), but this is when it becomes real.",
+    title: "3 · Email and payments",
+    blurb: "Both are optional. Without them, emails are only logged and invoices have no Pay now button.",
     items: [
-      { key: "phone", title: "Add your phone number", why: "So the test message and your own WhatsApp alerts have somewhere to go.", href: "/settings/account" },
-      { key: "whatsapp", title: "Connect WhatsApp Business", why: "Confirmations, reminders, campaigns — and inbound enquiries turning into leads.", href: "/integrations" },
-      { key: "templates", title: "Map your approved message templates", why: "Meta only delivers reminders and campaigns that use an approved template.", href: "/integrations" },
       { key: "email", title: "Connect email", why: "Email quotes and invoices, and get staff alerts by email.", href: "/integrations", optional: true },
       { key: "payments", title: "Connect Razorpay", why: "Adds a Pay now button to every invoice link.", href: "/integrations", optional: true },
     ],

@@ -26,7 +26,7 @@ export default async function SettingsPage() {
           <Card className="p-5">
             <h2 className="font-display text-sm font-bold">Slot booking link</h2>
             <p className="mt-0.5 text-sm text-muted">
-              Share this on Instagram, WhatsApp, or your website — anyone can request a booking without an account.
+              Share this on Instagram, in your bio or on your Google profile — anyone can request a booking without an account.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <code className="break-all rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs">{bookingUrl}</code>
@@ -37,15 +37,13 @@ export default async function SettingsPage() {
           <Card className="p-5">
             <h2 className="font-display text-sm font-bold">Retention &amp; follow-up automation</h2>
             <p className="mt-0.5 text-sm text-muted">
-              When customers get a service reminder, and when staff get nudged about leads going quiet.
+              When you&apos;re reminded about customers due for a service, leads going quiet, and unpaid invoices.
             </p>
             <div className="mt-4">
               <SettingsForm
                 serviceIntervalDays={org.serviceIntervalDays}
-                reminderMessage={org.reminderMessage}
                 staleLeadDays={org.staleLeadDays}
                 invoiceReminderDays={org.invoiceReminderDays}
-                invoiceReminderWhatsapp={org.invoiceReminderWhatsapp}
               />
             </div>
           </Card>
@@ -72,7 +70,7 @@ export default async function SettingsPage() {
 
           <Card className="p-5">
             <h2 className="font-display text-sm font-bold">Integrations</h2>
-            <p className="mt-0.5 text-sm text-muted">Connect WhatsApp and other third-party services.</p>
+            <p className="mt-0.5 text-sm text-muted">Connect email and online payments.</p>
             <Link href="/integrations" className="mt-3 inline-block text-sm font-medium text-accent-deep hover:underline">
               Manage integrations →
             </Link>

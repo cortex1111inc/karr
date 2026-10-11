@@ -199,6 +199,8 @@ export const whatsappMessageStatusEnum = pgEnum("whatsapp_message_status", [
 // WHATSAPP_ACCESS_TOKEN/WHATSAPP_PHONE_NUMBER_ID are configured (see
 // lib/whatsapp/), logged here either way so retention activity is visible
 // even in the console-fallback (dev) mode.
+// DEPRECATED: WhatsApp was removed from the product; table kept (unused) so
+// nothing destructive is needed. See the `whatsapp-available` git tag.
 export const whatsappMessages = pgTable(
   "whatsapp_messages",
   {
@@ -222,6 +224,7 @@ export const whatsappMessages = pgTable(
   ],
 );
 
+// DEPRECATED: campaigns were WhatsApp broadcasts and were removed with it.
 export const campaigns = pgTable(
   "campaigns",
   {
@@ -665,6 +668,10 @@ export const trackingLinkClicks = pgTable(
   (table) => [index("tracking_link_clicks_link_idx").on(table.trackingLinkId, table.clickedAt)],
 );
 
+// DEPRECATED: the per-business micro-site builder was removed (the product
+// has its own landing page instead). The table is kept, unused, so removing
+// the feature needed no destructive migration; drop it with a numbered SQL
+// file in db/sql/ whenever convenient.
 export type SiteService = { name: string; description?: string; priceFrom?: number };
 
 // One public micro-site per org, served at /site/[organizations.slug].

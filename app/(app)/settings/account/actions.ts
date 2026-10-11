@@ -13,22 +13,10 @@ type State = { error: string | null };
 
 export async function updateName(_prev: State, formData: FormData): Promise<State> {
   const user = await requireUser();
-  const parsed = z
-    .object({
-      fullName: z.string().trim().min(1, "Enter your name").max(100),
-      phone: z
-        .string()
-        .trim()
-        .max(20)
-        .regex(/^$|^\+?[0-9 ()-]{7,20}$/, "Enter a valid phone number"),
-    })
-    .safeParse({ fullName: formData.get("fullName"), phone: formData.get("phone") ?? "" });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form and try again." };
+  const parsed = z.string().trim().min(1, "Enter your name").max(100).safeParse(formData.get("fullName"));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Enter your name" };
 
-  await db
-    .update(profiles)
-    .set({ fullName: parsed.data.fullName, phone: parsed.data.phone || null })
-    .where(eq(profiles.id, user.id));
+  await db.update(profiles).set({ fullName: parsed.data }).where(eq(profiles.id, user.id));
   revalidatePath("/", "layout");
   return { error: null };
 }
@@ -63,7 +51,7 @@ export async function updateNotificationPrefs(_prev: State, formData: FormData):
   const channels = formData
     .getAll("channel")
     .map(String)
-    .filter((c) => c === "email" || c === "whatsapp");
+    .filter((c) => c === "email");
   await db
     .update(profiles)
     .set({ mutedNotificationKinds: muted, alertChannels: channels })

@@ -3,32 +3,29 @@ import { and, eq, inArray, isNotNull, isNull, lt, lte, notInArray, or, sql } fro
 import { db } from "@/db";
 import { customers, invoices, leads, organizations, profiles, rateLimits, stockItems } from "@/db/schema";
 import { formatCurrency } from "@/lib/billing/money";
-import { getSiteUrl } from "@/lib/site";
 import { returnFinishedRentals } from "@/lib/rentals";
 import { log } from "@/lib/log";
-import { sendWhatsApp } from "@/lib/whatsapp";
-import { renderReminderMessage } from "@/lib/whatsapp/templates";
 import { notify } from "@/lib/notifications";
 
 // Single consolidated daily job (Vercel Cron, see vercel.json) — kept as one
 // route rather than one-per-concern so the project stays within a free-tier
 // cron-job quota. Handles:
-//   1. Service/rental retention reminders (WhatsApp)
+//   1. In-app "customer due for service" nudges for the owner
 //   2. In-app "follow-up due" nudges for leads
 //   3. In-app "stale lead" nudges (no update in org.staleLeadDays days),
 //      escalated to the owner at 2x that
 //   4. In-app "low stock" nudges for the owner
-//   5. Unpaid-invoice reminders (owner in-app + optional customer WhatsApp)
+//   5. Unpaid-invoice reminders for the owner
 //   6. Returning vehicles to available once their rentals have ended
 //   7. Pruning expired rate-limit windows
 //
-// Caps keep one run inside maxDuration. Service reminders call WhatsApp
-// (slow, external) but each row rolls its due date forward once handled, so
-// a small cap just defers the remainder to the next run. The notification
-// sections are DB-only and deduped rows stay selected, so they get a much
-// larger cap — a small one could re-pick the same rows every run.
+// Caps keep one run inside maxDuration. Service-due rows roll their due date
+// forward once handled, so a small cap just defers the remainder to the next
+// run. The other notification sections are DB-only and deduped rows stay
+// selected, so they get a much larger cap — a small one could re-pick the
+// same rows every run.
 export const maxDuration = 60;
-const WHATSAPP_BATCH = 200;
+const SERVICE_BATCH = 200;
 const NOTIFY_BATCH = 2000;
 
 export async function GET(request: NextRequest) {
@@ -51,7 +48,6 @@ export async function GET(request: NextRequest) {
     lowStockNudges: 0,
     staleLeadEscalations: 0,
     invoiceReminders: 0,
-    invoiceWhatsApps: 0,
     vehiclesReturned: 0,
   };
 
@@ -70,15 +66,14 @@ export async function GET(request: NextRequest) {
     return ownerId;
   }
 
-  // 1. Service reminders
+  // 1. Customers due for service — tell the owner who to contact, then roll
+  // the due date forward so it doesn't repeat every night.
   const dueForService = await db
     .select({
       customerId: customers.id,
       orgId: customers.orgId,
       fullName: customers.fullName,
-      phone: customers.phone,
       serviceIntervalDays: organizations.serviceIntervalDays,
-      reminderMessage: organizations.reminderMessage,
     })
     .from(customers)
     .innerJoin(organizations, eq(customers.orgId, organizations.id))
@@ -88,20 +83,25 @@ export async function GET(request: NextRequest) {
         or(isNull(customers.lastReminderSentAt), lte(customers.lastReminderSentAt, customers.nextServiceDueAt)),
       ),
     )
-    .limit(WHATSAPP_BATCH);
+    .limit(SERVICE_BATCH);
 
   for (const customer of dueForService) {
     const nextDue = new Date(now);
     nextDue.setDate(nextDue.getDate() + customer.serviceIntervalDays);
 
-    await sendWhatsApp({
-      orgId: customer.orgId,
-      to: customer.phone,
-      kind: "service_reminder",
-      customerId: customer.customerId,
-      body: renderReminderMessage(customer.reminderMessage, customer.fullName),
-      templateParams: [customer.fullName],
-    });
+    const ownerId = await resolveOwnerId(customer.orgId);
+    if (ownerId) {
+      await notify({
+        orgId: customer.orgId,
+        profileId: ownerId,
+        kind: "service_due",
+        title: `${customer.fullName} is due for a service`,
+        body: "It's been a while since their last visit — call or email them to book a slot.",
+        link: `/customers/${customer.customerId}`,
+        sourceType: "customer",
+        sourceId: customer.customerId,
+      });
+    }
 
     await db
       .update(customers)
@@ -238,24 +238,15 @@ export async function GET(request: NextRequest) {
   }
 
   // 5. Unpaid invoices — sent/partial and older than org.invoiceReminderDays.
-  // The owner gets an in-app notification (deduped weekly); the customer
-  // gets a WhatsApp at most once per interval, when the org opted in.
+  // The owner gets an in-app notification, deduped weekly.
   const unpaid = await db
     .select({
       id: invoices.id,
       orgId: invoices.orgId,
       number: invoices.number,
       contactName: invoices.contactName,
-      contactPhone: invoices.contactPhone,
-      customerId: invoices.customerId,
       total: invoices.total,
       amountPaid: invoices.amountPaid,
-      publicToken: invoices.publicToken,
-      createdAt: invoices.createdAt,
-      lastReminderSentAt: invoices.lastReminderSentAt,
-      reminderDays: organizations.invoiceReminderDays,
-      reminderWhatsapp: organizations.invoiceReminderWhatsapp,
-      orgName: organizations.name,
     })
     .from(invoices)
     .innerJoin(organizations, eq(invoices.orgId, organizations.id))
@@ -267,47 +258,23 @@ export async function GET(request: NextRequest) {
     )
     .limit(NOTIFY_BATCH);
 
-  let invoiceWhatsAppBudget = WHATSAPP_BATCH;
   for (const inv of unpaid) {
     const due = Number(inv.total) - Number(inv.amountPaid);
     if (due <= 0) continue;
-
     const ownerId = await resolveOwnerId(inv.orgId);
-    if (ownerId) {
-      await notify({
-        orgId: inv.orgId,
-        profileId: ownerId,
-        kind: "invoice_overdue",
-        title: `${inv.number} is unpaid`,
-        body: `${inv.contactName} still owes ${formatCurrency(due)}.`,
-        link: `/invoices/${inv.id}`,
-        sourceType: "invoice",
-        sourceId: inv.id,
-        dedupeWithinHours: 24 * 7,
-      });
-      results.invoiceReminders += 1;
-    }
-
-    const intervalAgo = new Date(now);
-    intervalAgo.setDate(intervalAgo.getDate() - inv.reminderDays);
-    if (
-      inv.reminderWhatsapp &&
-      invoiceWhatsAppBudget > 0 &&
-      (!inv.lastReminderSentAt || inv.lastReminderSentAt <= intervalAgo)
-    ) {
-      invoiceWhatsAppBudget -= 1;
-      const link = `${getSiteUrl()}/invoice/${inv.publicToken}`;
-      await sendWhatsApp({
-        orgId: inv.orgId,
-        to: inv.contactPhone,
-        kind: "invoice_reminder",
-        customerId: inv.customerId ?? undefined,
-        body: `Hi ${inv.contactName}, a friendly reminder from ${inv.orgName}: ${formatCurrency(due)} is pending on invoice ${inv.number}. View and pay: ${link}`,
-        templateParams: [inv.contactName, inv.orgName, formatCurrency(due), inv.number, link],
-      });
-      await db.update(invoices).set({ lastReminderSentAt: now }).where(eq(invoices.id, inv.id));
-      results.invoiceWhatsApps += 1;
-    }
+    if (!ownerId) continue;
+    await notify({
+      orgId: inv.orgId,
+      profileId: ownerId,
+      kind: "invoice_overdue",
+      title: `${inv.number} is unpaid`,
+      body: `${inv.contactName} still owes ${formatCurrency(due)}.`,
+      link: `/invoices/${inv.id}`,
+      sourceType: "invoice",
+      sourceId: inv.id,
+      dedupeWithinHours: 24 * 7,
+    });
+    results.invoiceReminders += 1;
   }
 
   // 6. Vehicles whose rentals have all ended go back to available

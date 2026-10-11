@@ -12,7 +12,7 @@ export const metadata = { title: "Your account" };
 export default async function AccountPage() {
   const user = await requireUser();
   const [profile] = await db
-    .select({ phone: profiles.phone, muted: profiles.mutedNotificationKinds, channels: profiles.alertChannels })
+    .select({ muted: profiles.mutedNotificationKinds, channels: profiles.alertChannels })
     .from(profiles)
     .where(eq(profiles.id, user.id))
     .limit(1);
@@ -34,14 +34,14 @@ export default async function AccountPage() {
             Signed in as <span className="font-medium text-foreground">{user.email}</span> · {user.role === "owner" ? "Owner" : "Staff"}
           </p>
           <div className="mt-4">
-            <NameForm fullName={user.fullName} phone={profile?.phone ?? null} />
+            <NameForm fullName={user.fullName} />
           </div>
         </Card>
         <Card className="p-5">
           <h2 className="font-display text-sm font-bold">Notifications</h2>
           <p className="mt-0.5 text-sm text-muted">Choose which in-app reminders you get.</p>
           <div className="mt-4">
-            <NotificationPrefsForm muted={profile?.muted ?? []} channels={profile?.channels ?? []} hasPhone={Boolean(profile?.phone)} />
+            <NotificationPrefsForm muted={profile?.muted ?? []} channels={profile?.channels ?? []} />
           </div>
         </Card>
         <Card className="p-5">

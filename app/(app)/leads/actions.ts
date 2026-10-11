@@ -8,8 +8,6 @@ import { db } from "@/db";
 import { customers, leadActivities, leadSourceEnum, leadStageEnum, leads, organizations, profiles, trackingLinks, vehicles } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { generatePublicToken } from "@/lib/tokens";
-import { getSiteUrl } from "@/lib/site";
-import { sendWhatsApp } from "@/lib/whatsapp";
 import { changeLeadStage, recordStageChange } from "@/lib/lead-stage";
 import { conflictMessage, findVehicleConflict, parseRentalRange } from "@/lib/rentals";
 
@@ -260,58 +258,9 @@ export async function convertLeadToCustomer(
     body: "Converted to customer and marked booked",
   });
 
-  const statusUrl = `${getSiteUrl()}/status/${lead.publicToken}`;
-  await sendWhatsApp({
-    orgId: user.orgId,
-    to: lead.contactPhone,
-    kind: "vehicle_received",
-    customerId: customer.id,
-    leadId,
-    body: `Hi ${lead.contactName}, we've got your booking for "${lead.interest}". Track it here: ${statusUrl}`,
-    templateParams: [lead.contactName, statusUrl],
-  });
-  await db.insert(leadActivities).values({
-    leadId,
-    authorId: user.id,
-    kind: "whatsapp",
-    body: "Sent vehicle-received WhatsApp message",
-  });
-
   revalidatePath("/leads");
   revalidatePath("/customers");
   redirect(`/customers/${customer.id}`);
-}
-
-export async function notifyReadyForPickup(leadId: string) {
-  const user = await requireUser();
-
-  const [lead] = await db
-    .select()
-    .from(leads)
-    .where(and(eq(leads.id, leadId), eq(leads.orgId, user.orgId)))
-    .limit(1);
-
-  if (!lead) return;
-
-  const statusUrl = `${getSiteUrl()}/status/${lead.publicToken}`;
-  await sendWhatsApp({
-    orgId: user.orgId,
-    to: lead.contactPhone,
-    kind: "ready_for_pickup",
-    customerId: lead.customerId ?? undefined,
-    leadId,
-    body: `Hi ${lead.contactName}, your vehicle is ready for pickup! View your booking and bill: ${statusUrl}`,
-    templateParams: [lead.contactName, statusUrl],
-  });
-
-  await db.insert(leadActivities).values({
-    leadId,
-    authorId: user.id,
-    kind: "whatsapp",
-    body: "Sent ready-for-pickup WhatsApp message",
-  });
-
-  revalidatePath(`/leads/${leadId}`);
 }
 
 export async function assignVehicleToLead(leadId: string, vehicleId: string): Promise<{ error: string | null }> {

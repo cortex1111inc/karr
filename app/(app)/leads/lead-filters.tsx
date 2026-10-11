@@ -32,7 +32,6 @@ export function LeadFilters({
         </label>
         <Select id="source" name="source" defaultValue={initial.source ?? ""} className="w-36">
           <option value="">Any source</option>
-          <option value="whatsapp">WhatsApp</option>
           <option value="instagram">Instagram</option>
           <option value="call">Call</option>
           <option value="website">Website</option>

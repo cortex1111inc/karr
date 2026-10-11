@@ -6,7 +6,7 @@ import { calculateTotals, formatCurrency } from "@/lib/billing/money";
 import { splitTax } from "@/lib/billing/gst";
 import { FLOW } from "@/lib/guide-content";
 import { cn } from "@/lib/utils";
-import { Bubble, Frame, LeadCard, MiniBars, Pill, Row } from "./mocks";
+import { Frame, LeadCard, MiniBars, Pill, Row } from "./mocks";
 
 // A made-up rental, acted out step by step. Nothing here touches real data;
 // the buttons inside the previews only change this component's state.
@@ -61,18 +61,19 @@ export function Preview({ index, flags, set }: { index: number; flags: Flags; se
   switch (index) {
     case 0:
       return (
-        <Frame label="Preview: WhatsApp message becoming a lead" title="WhatsApp → Leads">
+        <Frame label="Preview: booking form becoming a lead" title="Booking page → Leads">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Bubble from="customer" meta="Fri 6:42 pm">
-                Hi! Need a Creta this Friday to Sunday, with airport pickup. What&apos;s the rate?
-              </Bubble>
-              <p className="text-center text-xs text-faint">Unknown number, so a new lead is created</p>
+            <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3 text-sm">
+              <p className="font-display font-bold">Book with us</p>
+              <p className="text-xs text-muted">Name: Anjali Menon</p>
+              <p className="text-xs text-muted">Phone: +91 55555 10007</p>
+              <p className="text-xs text-muted">Need: Creta, Fri–Sun, airport pickup</p>
+              <p className="text-center text-xs text-faint">Submitted from the link on your Instagram bio</p>
             </div>
             <div className="flex flex-col gap-2">
-              <LeadCard highlight name="Anjali Menon" stage="New" note="Creta · Fri–Sun · airport pickup" source="Source: WhatsApp · via Arjun Travels link" />
+              <LeadCard highlight name="Anjali Menon" stage="New" note="Creta · Fri–Sun · airport pickup" source="Source: Website · via Arjun Travels link" />
               <p className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">
-                <span className="font-medium text-foreground">Notification to you:</span> New WhatsApp lead: Anjali Menon
+                <span className="font-medium text-foreground">Notification to you:</span> New booking request from Anjali Menon
               </p>
             </div>
           </div>
@@ -95,7 +96,7 @@ export function Preview({ index, flags, set }: { index: number; flags: Flags; se
             ))}
           </div>
           <p className="mt-3 text-xs text-muted">
-            Note added: &ldquo;Called — wants the quote on WhatsApp. Needs the car by Friday morning.&rdquo; Every stage change is stored as history.
+            Note added: &ldquo;Called — wants the quote by email. Needs the car by Friday morning.&rdquo; Every stage change is stored as history.
           </p>
         </Frame>
       );
@@ -251,10 +252,15 @@ export function Preview({ index, flags, set }: { index: number; flags: Flags; se
       );
     case 7:
       return (
-        <Frame label="Preview: automatic service reminder" title="WhatsApp · 90 days later">
-          <Bubble from="business" meta="Sent automatically at 3 AM · delivered">
-            Hi Anjali, it&apos;s been a while since your last visit to Malabar Drive &amp; Care — reply to book your next service or rental this week!
-          </Bubble>
+        <Frame label="Preview: automatic service-due notification" title="Notifications · 90 days later">
+          <div className="rounded-lg border border-border bg-surface p-3 text-sm">
+            <p className="flex items-center justify-between gap-2">
+              <span className="font-medium">Anjali Menon is due for a service</span>
+              <Pill>Service due</Pill>
+            </p>
+            <p className="mt-1 text-xs text-muted">It&apos;s been a while since their last visit — call or email them to book a slot.</p>
+            <p className="mt-2 text-[0.65rem] text-faint">Created automatically at 3 AM</p>
+          </div>
           <p className="mt-3 text-xs text-muted">Also handled for you every night:</p>
           <ul className="mt-1 flex flex-wrap gap-1.5">
             {["Follow-up due", "Stale lead", "Unpaid invoice", "Low stock", "Vehicle back to available"].map((t) => (

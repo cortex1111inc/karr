@@ -30,7 +30,7 @@ export function NewLeadDialog({ links = [] }: { links?: LinkOption[] }) {
       </div>
       <div>
         <Label htmlFor="source">Source</Label>
-        <Select id="source" name="source" defaultValue="whatsapp">
+        <Select id="source" name="source" defaultValue="call">
           {LEAD_SOURCES.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}

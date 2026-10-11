@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { customers, invoices, leads, whatsappMessages } from "@/db/schema";
+import { customers, invoices, leads } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { formatCurrency } from "@/lib/billing/money";
 import { PageHeader } from "@/components/layout/page-header";
@@ -18,14 +18,6 @@ const INVOICE_STATUS_TONE: Record<string, "neutral" | "accent" | "danger"> = {
   partial: "accent",
   paid: "accent",
   void: "danger",
-};
-
-const MESSAGE_KIND_LABEL: Record<string, string> = {
-  vehicle_received: "Vehicle received",
-  ready_for_pickup: "Ready for pickup",
-  service_reminder: "Service reminder",
-  campaign: "Campaign",
-  manual: "Manual",
 };
 
 const STAGE_LABEL: Record<string, string> = {
@@ -48,18 +40,12 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   if (!customer) notFound();
 
-  const [history, messages, customerInvoices] = await Promise.all([
+  const [history, customerInvoices] = await Promise.all([
     db
       .select()
       .from(leads)
       .where(and(eq(leads.customerId, id), eq(leads.orgId, user.orgId)))
       .orderBy(desc(leads.createdAt)),
-    db
-      .select()
-      .from(whatsappMessages)
-      .where(and(eq(whatsappMessages.customerId, id), eq(whatsappMessages.orgId, user.orgId)))
-      .orderBy(desc(whatsappMessages.createdAt))
-      .limit(10),
     db
       .select()
       .from(invoices)
@@ -160,28 +146,6 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                         {formatCurrency(invoice.total)}
                       </span>
                     </Link>
-                  ))
-                )}
-              </div>
-            </Card>
-
-            <Card className="p-5">
-              <h2 className="font-display text-sm font-bold">WhatsApp activity</h2>
-              <div className="mt-4 flex flex-col gap-3">
-                {messages.length === 0 ? (
-                  <p className="text-sm text-faint">No messages sent yet.</p>
-                ) : (
-                  messages.map((message) => (
-                    <div key={message.id} className="text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[0.68rem] uppercase tracking-wide text-faint">
-                          {MESSAGE_KIND_LABEL[message.kind]}
-                        </span>
-                        <Badge tone={message.status === "sent" ? "accent" : "danger"}>{message.status}</Badge>
-                        <span className="text-xs text-faint">{message.createdAt.toLocaleString()}</span>
-                      </div>
-                      <p className="mt-1 text-muted">{message.body}</p>
-                    </div>
                   ))
                 )}
               </div>

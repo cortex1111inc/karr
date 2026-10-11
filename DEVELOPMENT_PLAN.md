@@ -1,5 +1,7 @@
 # Vanspire OS — Development Plan (remaining work)
 
+> **Update 2026-10-11:** WhatsApp was removed from the product (UI, automations, webhook, guide). References below are historical. The last commit that still includes it is tagged `whatsapp-available`.
+
 This is the complete plan for everything left to build: the pending roadmap phase, integrations, UI updates, and production hardening. It's written for a **fresh Claude Code session (e.g. a cloud session) with no memory of how the app was built so far**, and for the human reviewing that session's work.
 
 Work top to bottom. Workstreams are ordered by dependency and risk — don't skip ahead to Growth features (WS6) before the foundations (WS1–WS4) are in, because later workstreams assume the test harness, error boundaries, responsive shell, and onboarding flow exist.

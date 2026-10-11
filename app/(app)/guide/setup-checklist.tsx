@@ -93,7 +93,7 @@ export function SetupChecklist({
 
       <Card className="p-5">
         <h2 className="font-display text-sm font-bold">Share your booking link</h2>
-        <p className="mt-0.5 text-sm text-muted">Put this on Instagram, WhatsApp status or your Google profile. Anyone can request a booking without an account.</p>
+        <p className="mt-0.5 text-sm text-muted">Put this on Instagram or your Google profile. Anyone can request a booking without an account.</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <code className="break-all rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs">{bookingUrl}</code>
           <CopyLinkButton url={bookingUrl} />
@@ -136,7 +136,6 @@ export function SetupChecklist({
           <h3 className="mt-5 text-xs font-medium uppercase tracking-wide text-faint">Also worth doing</h3>
           <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-muted">
             <li>In Supabase → Authentication → URL configuration, add your site address and <code className="font-mono text-xs">/auth/callback</code> so invite and reset emails open the right page.</li>
-            <li>In Meta Business Suite, create and get approval for the message templates listed on the Integrations page.</li>
             <li>Take regular database backups — your free plan does not keep them for you (see <code className="font-mono text-xs">db/OPERATIONS.md</code>).</li>
             <li>Point an uptime monitor at <code className="font-mono text-xs">/api/health</code>.</li>
           </ul>

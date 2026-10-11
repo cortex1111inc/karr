@@ -9,18 +9,14 @@ import { changePassword, signOutEverywhere, updateName, updateNotificationPrefs 
 
 const initial = { error: null as string | null };
 
-export function NameForm({ fullName, phone }: { fullName: string; phone: string | null }) {
+export function NameForm({ fullName }: { fullName: string }) {
   const [state, formAction, pending] = useActionState(updateName, initial);
-  useActionToast(state, pending, "Profile updated");
+  useActionToast(state, pending, "Name updated");
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">
       <div className="min-w-0 flex-1 sm:max-w-xs">
         <Label htmlFor="fullName">Name</Label>
         <Input id="fullName" name="fullName" required defaultValue={fullName} autoComplete="name" />
-      </div>
-      <div className="min-w-0 flex-1 sm:max-w-xs">
-        <Label htmlFor="phone">Phone (for staff alerts)</Label>
-        <Input id="phone" name="phone" type="tel" defaultValue={phone ?? ""} autoComplete="tel" placeholder="+91 90000 00000" />
       </div>
       <Button type="submit" variant="accent" size="sm" disabled={pending}>
         {pending ? "Saving…" : "Save"}
@@ -87,7 +83,7 @@ const PREF_KINDS: { kind: string; label: string; hint: string }[] = [
   { kind: "service_due", label: "Service due", hint: "A customer is due for a service." },
 ];
 
-export function NotificationPrefsForm({ muted, channels, hasPhone }: { muted: string[]; channels: string[]; hasPhone: boolean }) {
+export function NotificationPrefsForm({ muted, channels }: { muted: string[]; channels: string[] }) {
   const [state, formAction, pending] = useActionState(updateNotificationPrefs, initial);
   useActionToast(state, pending, "Preferences saved");
   return (
@@ -105,21 +101,10 @@ export function NotificationPrefsForm({ muted, channels, hasPhone }: { muted: st
         ))}
       </fieldset>
       <fieldset className="mt-2 flex flex-col gap-2 border-t border-border pt-3">
-        <legend className="text-sm font-medium">Also send them to</legend>
+        <legend className="text-sm font-medium">Email</legend>
         <label className="flex items-center gap-3 text-sm">
           <input type="checkbox" name="channel" value="email" defaultChecked={channels.includes("email")} className="size-4 accent-accent" />
-          My email
-        </label>
-        <label className="flex items-center gap-3 text-sm">
-          <input
-            type="checkbox"
-            name="channel"
-            value="whatsapp"
-            defaultChecked={channels.includes("whatsapp")}
-            disabled={!hasPhone}
-            className="size-4 accent-accent"
-          />
-          My WhatsApp {hasPhone ? null : <span className="text-xs text-faint">(add your phone above first)</span>}
+          Also send these to my email
         </label>
       </fieldset>
       <div>

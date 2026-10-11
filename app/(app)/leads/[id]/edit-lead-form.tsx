@@ -5,6 +5,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import type { leads } from "@/db/schema";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { LEAD_SOURCES } from "@/lib/leads";
 import { updateLead } from "../actions";
 import { TrackingLinkSelect, type LinkOption } from "../tracking-link-select";
 import { useActionToast } from "@/components/ui/toast";
@@ -39,13 +40,12 @@ export function EditLeadForm({ lead, links = [] }: { lead: Lead; links?: LinkOpt
       <div>
         <Label htmlFor="source">Source</Label>
         <Select id="source" name="source" defaultValue={lead.source}>
-          <option value="whatsapp">WhatsApp</option>
-          <option value="instagram">Instagram</option>
-          <option value="call">Call</option>
-          <option value="website">Website</option>
-          <option value="walk_in">Walk-in</option>
-          <option value="referral">Referral</option>
-          <option value="other">Other</option>
+          {lead.source === "whatsapp" ? <option value="whatsapp">Messaging</option> : null}
+          {LEAD_SOURCES.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
         </Select>
       </div>
       <div>

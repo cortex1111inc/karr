@@ -35,8 +35,6 @@ const GROUPS: { label: string | null; items: NavItem[] }[] = [
     items: [
       { href: "/growth", label: "Growth" },
       { href: "/growth/links", label: "Tracking links" },
-      { href: "/growth/website", label: "Website" },
-      { href: "/campaigns", label: "Campaigns" },
       { href: "/reports", label: "Reports" },
     ],
   },

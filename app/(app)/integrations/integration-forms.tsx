@@ -9,10 +9,7 @@ import {
   disconnectIntegration,
   saveEmailIntegration,
   saveRazorpayIntegration,
-  saveWhatsAppIntegration,
-  saveWhatsAppTemplates,
   sendEmailTest,
-  sendWhatsAppTest,
 } from "./actions";
 
 const initial: { error: string | null } = { error: null };
@@ -49,69 +46,6 @@ function SubmitRow({ pending, connected }: { pending: boolean; connected: boolea
         {pending ? "Saving…" : connected ? "Update" : "Connect"}
       </Button>
     </div>
-  );
-}
-
-export function WhatsAppForm({ phoneNumberId, isConnected }: { phoneNumberId: string | null; isConnected: boolean }) {
-  const [state, formAction, pending] = useActionState(saveWhatsAppIntegration, initial);
-  useActionToast(state, pending, "WhatsApp connection saved");
-  return (
-    <form action={formAction} className="flex flex-col gap-4">
-      <div>
-        <Label htmlFor="phoneNumberId">Phone Number ID</Label>
-        <Input id="phoneNumberId" name="phoneNumberId" required defaultValue={phoneNumberId ?? ""} placeholder="1234567890123456" />
-        <p className="mt-1 text-xs text-faint">Meta Business Suite → WhatsApp → API Setup → &quot;Phone number ID&quot;.</p>
-      </div>
-      <SecretInput id="accessToken" label="Access Token" saved={isConnected} placeholder="EAAxxxxxxxxxxxxx" hint="Stored encrypted and never shown again." />
-      <FormError error={state.error} />
-      <SubmitRow pending={pending} connected={isConnected} />
-    </form>
-  );
-}
-
-export type TemplateRow = { kind: string; label: string; variables: string[]; example: string; name: string; language: string };
-
-export function TemplatesForm({ rows }: { rows: TemplateRow[] }) {
-  const [state, formAction, pending] = useActionState(saveWhatsAppTemplates, initial);
-  useActionToast(state, pending, "Templates saved");
-  return (
-    <form action={formAction} className="flex flex-col gap-4">
-      <p className="text-sm text-muted">
-        Meta only delivers messages <em>you</em> start (reminders, campaigns) through approved templates. Create each
-        template in Meta Business Suite with the body below, then enter its name here. Kinds left blank are sent as plain
-        text, which only reaches customers who messaged you in the last 24 hours.
-      </p>
-      {rows.map((r) => (
-        <fieldset key={r.kind} className="rounded-lg border border-border p-3">
-          <legend className="px-1 text-sm font-medium">{r.label}</legend>
-          <p className="text-xs text-faint">
-            Example body: <span className="font-mono">{r.example}</span>
-            <br />
-            Variables: {r.variables.map((v, i) => `{{${i + 1}}} ${v}`).join(", ")}
-          </p>
-          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_7rem]">
-            <div>
-              <Label htmlFor={`template_${r.kind}`} className="sr-only">
-                {r.label} template name
-              </Label>
-              <Input id={`template_${r.kind}`} name={`template_${r.kind}`} defaultValue={r.name} placeholder="template_name" />
-            </div>
-            <div>
-              <Label htmlFor={`language_${r.kind}`} className="sr-only">
-                {r.label} template language
-              </Label>
-              <Input id={`language_${r.kind}`} name={`language_${r.kind}`} defaultValue={r.language || "en"} placeholder="en" />
-            </div>
-          </div>
-        </fieldset>
-      ))}
-      <FormError error={state.error} />
-      <div>
-        <Button type="submit" variant="accent" size="sm" disabled={pending}>
-          {pending ? "Saving…" : "Save templates"}
-        </Button>
-      </div>
-    </form>
   );
 }
 
@@ -159,7 +93,7 @@ export function RazorpayForm({ keyId, isConnected, webhookUrl }: { keyId: string
   );
 }
 
-export function TestButton({ channel }: { channel: "whatsapp" | "email" }) {
+export function TestButton() {
   const toast = useToast();
   const [pending, startTransition] = useTransition();
   return (
@@ -170,8 +104,8 @@ export function TestButton({ channel }: { channel: "whatsapp" | "email" }) {
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
-          const res = await (channel === "whatsapp" ? sendWhatsAppTest() : sendEmailTest());
-          toast(res.error ?? (channel === "whatsapp" ? "Test WhatsApp sent to your phone" : "Test email sent to you"), res.error ? "error" : "success");
+          const res = await sendEmailTest();
+          toast(res.error ?? "Test email sent to you", res.error ? "error" : "success");
         })
       }
     >
@@ -181,7 +115,6 @@ export function TestButton({ channel }: { channel: "whatsapp" | "email" }) {
 }
 
 const DISCONNECT_COPY = {
-  whatsapp: { name: "WhatsApp", body: "Messages will fall back to the shared credentials (if any) or be logged instead of sent." },
   email: { name: "email", body: "Emails will fall back to the shared sender (if any) or be logged instead of sent." },
   razorpay: { name: "Razorpay", body: "Customers will no longer see a Pay now button on invoices." },
 } as const;

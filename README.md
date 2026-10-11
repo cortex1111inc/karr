@@ -12,7 +12,6 @@ CRM, lead management, retention and billing for car rental and service businesse
 | Auth | Supabase Auth (email/password) |
 | Styling | Tailwind CSS v4 |
 | Validation | Zod |
-| WhatsApp | WhatsApp Cloud API, behind a provider interface (`lib/whatsapp/`) — falls back to console logging without credentials |
 | Scheduled jobs | Vercel Cron (`vercel.json`) |
 
 > Next.js 16 renamed `middleware.ts` → `proxy.ts` and other conventions changed from what most training data expects. Before touching routing/proxy/caching code, check `node_modules/next/dist/docs/` rather than assuming prior knowledge — see `AGENTS.md`.
@@ -25,7 +24,7 @@ CRM, lead management, retention and billing for car rental and service businesse
    - `DATABASE_URL` — Project Settings → Database → Connection string (URI)
    - `SUPABASE_SERVICE_ROLE_KEY` — Project Settings → API (server-only: `db/seed.ts` and staff invites)
    - `INTEGRATIONS_ENCRYPTION_KEY` — required for the Integrations page to work (generate with `openssl rand -hex 32`).
-   - `WHATSAPP_PHONE_NUMBER_ID` / `WHATSAPP_ACCESS_TOKEN` and `CRON_SECRET` are optional — see "WhatsApp & retention" below.
+   - `CRON_SECRET`, `RESEND_API_KEY` and `EMAIL_FROM` are optional — see "Integrations" below.
 3. Install dependencies and apply the schema — see `db/MIGRATIONS.md` (`db:push` doesn't work against this project's Supabase instance).
 4. Create your first user in the Supabase dashboard (Authentication → Users → Add user), then link them to a workspace:
    ```bash
@@ -49,23 +48,20 @@ CRM, lead management, retention and billing for car rental and service businesse
 
 ## Integrations
 
-Third-party credentials (currently: WhatsApp) are connected through **Settings → Integrations** (`/integrations`) — no code or redeploy needed. The owner pastes a Phone Number ID + Access Token there; it's encrypted (`lib/crypto.ts`, AES-256-GCM, key from `INTEGRATIONS_ENCRYPTION_KEY`) and stored in the `integrations` table, one row per org per provider. The saved token is never sent back to the browser — the form only ever accepts a new one, never displays the old one.
+Third-party credentials (email and online payments) are connected through **Settings → Integrations** (`/integrations`) — no code or redeploy needed. The owner pastes keys there; they are encrypted (`lib/crypto.ts`, AES-256-GCM, key from `INTEGRATIONS_ENCRYPTION_KEY`) and stored in the `integrations` table, one row per org per provider. A saved secret is never sent back to the browser — the form only ever accepts a new one.
 
-Every outbound WhatsApp message (booking confirmation, ready-for-pickup, service reminders, campaigns) goes through `lib/whatsapp/sendWhatsApp()`, which resolves credentials in this order:
+- **Email** (Resend): every outbound email goes through `lib/email/sendEmail()`. Credentials resolve as the org's own key → `RESEND_API_KEY` + `EMAIL_FROM` env vars → console logging, and each send is audited in `email_messages`.
+- **Online payments** (Razorpay): "Pay now" on the public invoice page; a signed per-org webhook records the payment once.
 
-1. **This org's own connection**, from the Integrations page.
-2. **Shared fallback** — `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_ACCESS_TOKEN` env vars, if set (useful for a single-tenant deploy, or as a default before any org connects their own).
-3. **Console logging** (`ConsoleProvider`) — every retention feature still works end-to-end for development/demo without any live WhatsApp account.
+> **WhatsApp was removed from the product** (UI, automations, webhook and docs). The `whatsapp_messages` and `campaigns` tables and any saved `whatsapp` integration rows were left in the database untouched. The last commit that still had it is tagged `whatsapp-available`.
 
-Always writes an audit row to the `whatsapp_messages` table regardless of which path was used, visible on each customer's detail page.
-
-The daily job lives at `app/api/cron/daily/route.ts`, scheduled via `vercel.json`. It's one consolidated route (service reminders + lead follow-up/stale nudges) rather than one cron per concern, to stay within Vercel's free-tier cron quota. Protect it in production by setting `CRON_SECRET` (Vercel sends it automatically as a bearer token when the env var is present); without it the route runs unauthenticated, which is fine for local testing only.
+The daily job lives at `app/api/cron/daily/route.ts`, scheduled via `vercel.json`. It's one consolidated route (customers due for service, lead follow-up/stale nudges, unpaid invoices, low stock) rather than one cron per concern, to stay within Vercel's free-tier cron quota. Protect it in production by setting `CRON_SECRET` (Vercel sends it automatically as a bearer token when the env var is present); without it the route runs unauthenticated, which is fine for local testing only.
 
 ## In-app notifications
 
-Staff get in-app nudges (sidebar unread badge, `/notifications` page) for two things the daily cron checks: a lead's `followUpAt` has arrived, or a lead has had no update in `organizations.staleLeadDays` days (both configurable per org in Settings). `lib/notifications.ts`'s `notify()` dedupes so the same still-true condition doesn't re-notify on every run. No email/SMS yet — see the WhatsApp note above for the pattern to extend this with a real channel later.
+Staff get in-app nudges (sidebar unread badge, `/notifications` page) for two things the daily cron checks: a lead's `followUpAt` has arrived, or a lead has had no update in `organizations.staleLeadDays` days (both configurable per org in Settings). `lib/notifications.ts`'s `notify()` dedupes so the same still-true condition doesn't re-notify on every run. People can opt in to an email copy on `/settings/account`.
 
-`NEXT_PUBLIC_APP_URL` controls the domain used in links sent inside WhatsApp messages (booking status links). On Vercel it falls back to `VERCEL_URL` automatically if unset.
+`NEXT_PUBLIC_APP_URL` controls the domain used in links we send (emailed quotes and invoices, status links). On Vercel it falls back to `VERCEL_URL` automatically if unset.
 
 ## Billing
 
@@ -97,10 +93,9 @@ Two separate features, not one — "stock" means different things for a rental b
 
 All aggregation happens in JS after fetching the date-range rows (no SQL `GROUP BY`/`date_trunc`) — simpler to read at this data scale, revisit only if row counts ever justify the complexity. "Conversion" means *currently* `stage = 'booked'`, not a true point-in-time funnel — accurate enough for a trend signal, not a precise historical audit (would need a stage-change-history table for that).
 
-## Growth (marketing attribution & micro-site)
+## Growth (marketing attribution)
 
-- **Tracking links** (`/growth/links`): one per influencer/ad, public URL `/r/[orgSlug]/[code]`. Visiting it records a click (one per visitor per link per 10 min), sets a 30-day `vs_ref` cookie, and redirects to the org's site (or booking page if unpublished). Bookings are credited from `?ref=<code>` first, else the cookie — both resolved within the org only; archived links keep redirecting but stop getting credit. Staff can also attribute a lead manually on the lead form. Named "tracking links" to stay distinct from `campaigns` (WhatsApp broadcasts).
-- **Micro-site** (`/growth/website` → public `/site/[orgSlug]`): headline, services with "from ₹", about, hours, address/map, WhatsApp click-to-chat, embedded booking form, 4 accent presets. Owner-entered URLs must be `https://` (`lib/growth-site-schema.ts` — they're rendered on a public page).
+- **Tracking links** (`/growth/links`): one per influencer/ad, public URL `/r/[orgSlug]/[code]`. Visiting it records a click (one per visitor per link per 10 min), sets a 30-day `vs_ref` cookie, and redirects to the org's booking page. Bookings are credited from `?ref=<code>` first, else the cookie — both resolved within the org only; archived links keep redirecting but stop getting credit. Staff can also attribute a lead manually on the lead form. Named "tracking links" to stay distinct from `campaigns` (WhatsApp broadcasts).
 - **Growth dashboard** (`/growth`): clicks, leads, booked, conversion, revenue and commission per link. Revenue attribution (`lib/growth-stats.ts`): payment → invoice's lead's link, else the link that first brought in the invoice's customer. Commission: flat ₹ per booked lead, or % of attributed revenue.
 
 ## Environments & deployment
@@ -115,10 +110,9 @@ One Supabase project currently serves dev and production. Before real customers,
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | omit (falls back to `VERCEL_URL`) | your domain | used in every shared link |
 | `INTEGRATIONS_ENCRYPTION_KEY` | any | any | **set once, never rotate casually** | different per environment is fine; saved credentials don't move between them |
 | `CRON_SECRET` | optional | optional | **required** | Vercel sends it as a Bearer token; cron only runs on Production |
-| `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` | optional | — | required for inbound WhatsApp | webhook refuses all calls without the secret |
-| `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `RESEND_API_KEY`, `EMAIL_FROM` | optional | — | optional | shared fallbacks; per-org credentials on `/integrations` win |
+| `RESEND_API_KEY`, `EMAIL_FROM` | optional | — | optional | shared fallbacks; per-org credentials on `/integrations` win |
 
-Custom domain checklist: add the domain in Vercel → set `NEXT_PUBLIC_APP_URL` → add it to Supabase Auth → URL Configuration (Site URL and Redirect URLs `https://<domain>/auth/callback`) → update the Meta webhook URL (`/api/webhooks/whatsapp`) and each org's Razorpay webhook URL (shown on `/integrations`).
+Custom domain checklist: add the domain in Vercel → set `NEXT_PUBLIC_APP_URL` → add it to Supabase Auth → URL Configuration (Site URL and Redirect URLs `https://<domain>/auth/callback`) → update each org's Razorpay webhook URL (shown on `/integrations`).
 
 Monitoring, backups and the audit log: see `db/OPERATIONS.md`.
 
@@ -175,7 +169,7 @@ app/
     reports/             Sales analytics — see "Reports" below
     campaigns/         Retention broadcast tool
     notifications/      In-app task reminders — mark read/mark all, fed by the daily cron
-    integrations/        Connect third-party services through the UI (WhatsApp today) — no code/redeploy
+    integrations/        Connect third-party services through the UI (email, Razorpay) — no code/redeploy
     settings/           Org settings (booking link, reminder config, stale-lead threshold, billing defaults) + settings/team (staff)
 db/
   schema.ts           Drizzle schema — source of truth for the data model
@@ -185,7 +179,6 @@ db/
 lib/
   auth.ts             requireUser() — resolves the session to an org-scoped profile
   supabase/           Supabase clients: client.ts (browser), server.ts (RSC/actions), proxy.ts (proxy.ts helper), admin.ts (service-role, staff invites)
-  whatsapp/            Provider abstraction (cloud-provider.ts, console-provider.ts) + sendWhatsApp() + templates.ts — checks integrations table first, then env vars
   billing/              money.ts (totals math), numbering.ts (atomic QUO-/INV- numbers), schema.ts (line-item validation)
   notifications.ts      notify() — creates an in-app notification, deduped by source+kind+profile
   crypto.ts             encryptSecret()/decryptSecret() — AES-256-GCM, used to store integration credentials at rest
@@ -209,8 +202,8 @@ drizzle.config.ts     drizzle-kit config
 - **Feature folders, not layer folders.** Route segments under `app/(app)/` own their `actions.ts` and any components specific to them (e.g. `leads/pipeline-board.tsx`). Only put something in `components/` when a second feature needs it.
 - **`components/ui/` stays framework-free.** Primitives take `className` and forward props; no business logic, no data fetching.
 - **Validate at the boundary.** Server Actions parse `FormData` with Zod before touching the database; trust the parsed value everywhere downstream.
-- **External sends go through an interface, not a direct API call.** `lib/whatsapp/` is the pattern to follow if another channel (SMS, email) gets added — a typed interface, a real provider, a no-op/logging fallback, one audit table.
-- **Third-party credentials belong on the Integrations page, not in env vars.** Env vars (`WHATSAPP_PHONE_NUMBER_ID` etc.) are a shared fallback only — the per-org path is a row in `integrations`, entered through `/integrations`, encrypted with `lib/crypto.ts` before it touches the database. When adding a new integration, follow this pattern rather than reaching for another env var.
+- **External sends go through an interface, not a direct API call.** `lib/email/` is the pattern to follow if another channel (SMS, say) gets added — a typed interface, a real provider, a no-op/logging fallback, one audit table.
+- **Third-party credentials belong on the Integrations page, not in env vars.** Env vars (`RESEND_API_KEY` etc.) are a shared fallback only — the per-org path is a row in `integrations`, entered through `/integrations`, encrypted with `lib/crypto.ts` before it touches the database. When adding a new integration, follow this pattern rather than reaching for another env var.
 - **Design tokens live in `app/globals.css`.** Colors, fonts — change the palette there, not by hardcoding hex values in components.
 
 ## Adding a new feature

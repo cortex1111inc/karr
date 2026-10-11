@@ -12,7 +12,6 @@ import { EditLeadForm } from "./edit-lead-form";
 import { AssigneeSelect } from "./assignee-select";
 import { ActivityTimeline } from "./activity-timeline";
 import { ConvertDialog } from "./convert-dialog";
-import { NotifyReadyButton } from "./notify-ready-button";
 import { VehicleSelect } from "./vehicle-select";
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -60,7 +59,6 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         action={
           lead.customerId ? (
             <div className="flex items-center gap-3">
-              <NotifyReadyButton leadId={lead.id} />
               <Badge tone="accent">Converted to customer</Badge>
             </div>
           ) : (

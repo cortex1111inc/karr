@@ -1,5 +1,7 @@
 # Vanspire OS — Build Roadmap
 
+> **Update 2026-10-11:** WhatsApp was removed from the product (UI, automations, webhook, guide). References below are historical. The last commit that still includes it is tagged `whatsapp-available`.
+
 Living checklist for what's built vs. what's next. Check items off as they ship — this file is the source of truth for progress, not a one-time plan.
 
 Phases build on each other; within a phase, items are roughly in build order but not strict.

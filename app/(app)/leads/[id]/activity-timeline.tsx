@@ -21,7 +21,7 @@ const KIND_LABEL: Record<Activity["kind"], string> = {
   note: "Note",
   stage_change: "Stage change",
   call: "Call",
-  whatsapp: "WhatsApp",
+  whatsapp: "Message",
 };
 
 export function ActivityTimeline({ leadId, activities }: { leadId: string; activities: Activity[] }) {

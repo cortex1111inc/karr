@@ -14,8 +14,7 @@ import { generatePublicToken } from "../lib/tokens";
 //         npm run db:seed-demo -- admin@gmail.com --reset    (wipes that workspace's data first)
 //
 // Every phone number is +91 55555 xxxxx (not a valid Indian mobile range), so
-// reminders and campaigns can never reach a real person even once WhatsApp is
-// connected. The three extra staff have no login.
+// emails or reminders can never reach a real person. The three extra staff have no login.
 
 // ---------- deterministic randomness ----------
 let seed = 20261005;
@@ -84,9 +83,8 @@ const STOCK = [
 ] as const;
 
 const SOURCES = [
-  ["whatsapp", 30],
-  ["instagram", 20],
-  ["call", 15],
+  ["instagram", 24],
+  ["call", 26],
   ["website", 12],
   ["walk_in", 10],
   ["referral", 9],
@@ -163,7 +161,6 @@ async function main() {
       serviceIntervalDays: 90,
       staleLeadDays: 5,
       invoiceReminderDays: 7,
-      reminderMessage: "Hi {{name}}, it's been a while since your last service at Malabar Drive & Care — reply to book a slot this week!",
     })
     .where(eq(t.organizations.id, orgId));
 
@@ -459,9 +456,9 @@ async function main() {
       activities.push({
         leadId: p.id,
         authorId: by,
-        kind: pick(["call", "whatsapp", "note"] as const),
+        kind: pick(["call", "note"] as const),
         body: pick([
-          "Called — wants the quote on WhatsApp",
+          "Called — wants the quote by email",
           "Shared the rate card and availability",
           "Customer comparing with another operator, will confirm by evening",
           "Asked for a discount on a 5-day rental",
@@ -695,58 +692,6 @@ async function main() {
   // ---------- counters, vehicles' statuses already set ----------
   await db.update(t.organizations).set({ quotationCounter: quoN, invoiceCounter: invN }).where(eq(t.organizations.id, orgId));
 
-  // ---------- campaigns & WhatsApp log ----------
-  const everyone = [...customerRows, ...newCustomers];
-  const campaignDefs = [
-    { name: "Monsoon service offer", message: "Hi {{name}}, monsoon check-up special at Malabar Drive & Care — free AC check with any service this month. Reply YES to book!", daysAgo: 38, share: 0.6 },
-    { name: "Onam weekend rentals", message: "Hi {{name}}, planning an Onam trip? Book a self-drive car for the long weekend and get 10% off. Reply to reserve.", daysAgo: 17, share: 0.45 },
-  ];
-  const wa: (typeof t.whatsappMessages.$inferInsert)[] = [];
-  for (const c of campaignDefs) {
-    const audience = everyone.filter(() => chance(c.share));
-    const id = randomUUID();
-    let sent = 0;
-    for (const cust of audience) {
-      const failed = chance(0.04);
-      if (!failed) sent++;
-      wa.push({ orgId, customerId: cust.id, campaignId: id, kind: "campaign", toPhone: cust.phone, body: c.message.replace("{{name}}", cust.fullName), status: failed ? "failed" : weighted([["read", 45], ["delivered", 40], ["sent", 15]]), providerMessageId: failed ? null : `demo-${randomUUID().slice(0, 8)}`, error: failed ? "Recipient phone number not on WhatsApp" : null, createdAt: at(c.daysAgo, 11) });
-    }
-    await db.insert(t.campaigns).values({ id, orgId, createdBy: owner.id, name: c.name, message: c.message, audienceCount: audience.length, sentCount: sent, createdAt: at(c.daysAgo, 11) });
-  }
-  for (const p of plans.filter((x) => x.stage === "booked" && x.customerId).slice(0, 40)) {
-    wa.push({ orgId, customerId: p.customerId, leadId: p.id, kind: "vehicle_received", toPhone: p.contactPhone, body: `Hi ${p.contactName}, we've got your booking for "${p.interest}". Track it here: https://demo.example/status/${p.id.slice(0, 8)}`, status: "read", providerMessageId: `demo-${randomUUID().slice(0, 8)}`, createdAt: p.bookedAt! });
-  }
-  for (const c of customerRows.filter((c) => c.nextServiceDueAt < NOW).slice(0, 8)) {
-    wa.push({ orgId, customerId: c.id, kind: "service_reminder", toPhone: c.phone, body: `Hi ${c.fullName}, it's been a while since your last service at Malabar Drive & Care — reply to book a slot this week!`, status: "delivered", providerMessageId: `demo-${randomUUID().slice(0, 8)}`, createdAt: addMs(c.nextServiceDueAt, int(0, 3) * DAY) });
-  }
-  for (const m of invMeta.filter((m) => m.status === "sent" || m.status === "partial").slice(0, 6)) {
-    wa.push({ orgId, kind: "invoice_reminder", toPhone: phone(), body: `Hi ${m.contactName}, a friendly reminder: ${m.number} is pending.`, status: "delivered", providerMessageId: `demo-${randomUUID().slice(0, 8)}`, createdAt: addMs(m.createdAt, 8 * DAY) });
-  }
-  await chunk(wa, (c) => db.insert(t.whatsappMessages).values(c));
-
-  // ---------- micro-site ----------
-  await db
-    .insert(t.orgSites)
-    .values({
-      orgId,
-      published: true,
-      headline: "Self-drive cars & trusted servicing in Kochi",
-      tagline: "Clean cars, honest prices, same-day support.",
-      about: "Malabar Drive & Care has been renting and servicing cars in Kochi since 2016. Airport pickup, driver on request, and a workshop that tells you what it is fixing before it fixes it.",
-      phone: "+91 55555 00000",
-      whatsappNumber: "+91 55555 00000",
-      address: "NH 66 Bypass, Palarivattom, Kochi 682025",
-      hours: "Mon–Sat 8:30am–7pm · Sun 10am–2pm",
-      accent: "green",
-      services: [
-        { name: "Self-drive rentals", description: "Hatchbacks, sedans, SUVs and MPVs by the day or week.", priceFrom: 1800 },
-        { name: "Full car service", description: "Oil, filters, brakes and a 40-point check.", priceFrom: 2800 },
-        { name: "AC repair", description: "Gas top-up, leak test and cabin filter.", priceFrom: 1800 },
-        { name: "Wheel alignment", priceFrom: 1100 },
-      ],
-    })
-    .onConflictDoUpdate({ target: t.orgSites.orgId, set: { published: true, updatedAt: NOW } });
-
   // ---------- notifications & audit ----------
   const notes: (typeof t.notifications.$inferInsert)[] = [];
   type Uuid = `${string}-${string}-${string}-${string}-${string}`;
@@ -781,9 +726,9 @@ async function main() {
   console.log(
     [
       `Seeded "${"Malabar Drive & Care"}" (${email}):`,
-      `  ${plans.length} leads · ${everyone.length} customers · ${vehicleRows.length} vehicles · ${stockRows.length} stock items`,
+      `  ${plans.length} leads · ${customerRows.length + newCustomers.length} customers · ${vehicleRows.length} vehicles · ${stockRows.length} stock items`,
       `  ${quoRows.length} quotations · ${invRows.length} invoices · ${payRows.length} payments (₹${Math.round(paidTotal).toLocaleString("en-IN")} collected)`,
-      `  ${linkRows.length} tracking links · ${clickRows.length} clicks · ${campaignDefs.length} campaigns · ${wa.length} WhatsApp log rows · ${notes.length} notifications`,
+      `  ${linkRows.length} tracking links · ${clickRows.length} clicks · ${notes.length} notifications`,
     ].join("\n"),
   );
 }

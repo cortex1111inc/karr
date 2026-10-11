@@ -1,7 +1,6 @@
 // Single source for lead-source labels/options — previously copied into
 // the pipeline board, filters, forms and reports separately.
 export const LEAD_SOURCES = [
-  { value: "whatsapp", label: "WhatsApp" },
   { value: "instagram", label: "Instagram" },
   { value: "call", label: "Call" },
   { value: "website", label: "Website" },
@@ -10,7 +9,11 @@ export const LEAD_SOURCES = [
   { value: "other", label: "Other" },
 ] as const;
 
-export const SOURCE_LABEL: Record<string, string> = Object.fromEntries(LEAD_SOURCES.map((s) => [s.value, s.label]));
+// `whatsapp` is no longer selectable but still exists on older leads, so it keeps a neutral label.
+export const SOURCE_LABEL: Record<string, string> = {
+  ...Object.fromEntries(LEAD_SOURCES.map((s) => [s.value, s.label])),
+  whatsapp: "Messaging",
+};
 
 export const LEAD_STAGES = [
   { value: "new", label: "New" },

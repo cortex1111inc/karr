@@ -7,7 +7,6 @@ import { decryptSecret } from "@/lib/crypto";
 export type IntegrationProvider = (typeof integrationProviderEnum.enumValues)[number];
 
 // Shape of integrations.settings per provider (non-secret config only).
-export type WhatsAppSettings = { templates?: Partial<Record<string, { name: string; language: string }>> };
 export type EmailSettings = { fromAddress?: string };
 export type RazorpaySettings = { keyId?: string };
 

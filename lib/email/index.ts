@@ -6,7 +6,7 @@ import { ConsoleEmailProvider } from "./console-provider";
 import { ResendProvider } from "./resend-provider";
 import type { EmailContent, EmailProvider, EmailSendResult } from "./types";
 
-// Same resolution order as WhatsApp: org's own Resend key → shared env
+// Resolution order: org's own Resend key → shared env
 // (RESEND_API_KEY + EMAIL_FROM) → console.
 async function getProvider(orgId: string): Promise<EmailProvider> {
   const row = await getIntegration(orgId, "email");

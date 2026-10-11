@@ -1,7 +1,7 @@
 import "server-only";
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypto";
 
-// Encrypts integration credentials (e.g. a WhatsApp access token) before
+// Encrypts integration credentials (e.g. an email API key) before
 // they're stored in the database, so a DB leak alone doesn't hand over
 // live third-party credentials. AES-256-GCM with a key derived from
 // INTEGRATIONS_ENCRYPTION_KEY — set once, never rotated casually (rotating

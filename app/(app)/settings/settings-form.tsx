@@ -1,26 +1,21 @@
 "use client";
 
 import { useActionState } from "react";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateOrgSettings } from "./actions";
-import { DEFAULT_REMINDER_MESSAGE } from "@/lib/whatsapp/templates";
 import { useActionToast } from "@/components/ui/toast";
 
 const initialState: { error: string | null } = { error: null };
 
 export function SettingsForm({
   serviceIntervalDays,
-  reminderMessage,
   staleLeadDays,
   invoiceReminderDays,
-  invoiceReminderWhatsapp,
 }: {
   serviceIntervalDays: number;
-  reminderMessage: string | null;
   staleLeadDays: number;
   invoiceReminderDays: number;
-  invoiceReminderWhatsapp: boolean;
 }) {
   const [state, formAction, pending] = useActionState(updateOrgSettings, initialState);
   useActionToast(state, pending, "Settings saved");
@@ -28,7 +23,7 @@ export function SettingsForm({
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div>
-        <Label htmlFor="serviceIntervalDays">Reminder interval (days)</Label>
+        <Label htmlFor="serviceIntervalDays">Remind me to contact customers after (days since their last visit)</Label>
         <Input
           id="serviceIntervalDays"
           name="serviceIntervalDays"
@@ -38,19 +33,6 @@ export function SettingsForm({
           defaultValue={serviceIntervalDays}
           className="w-28"
         />
-      </div>
-      <div>
-        <Label htmlFor="reminderMessage">Reminder message</Label>
-        <Textarea
-          id="reminderMessage"
-          name="reminderMessage"
-          rows={3}
-          defaultValue={reminderMessage ?? DEFAULT_REMINDER_MESSAGE}
-          placeholder={DEFAULT_REMINDER_MESSAGE}
-        />
-        <p className="mt-1 text-xs text-faint">
-          Use <code>{"{{name}}"}</code> to personalize. Sent automatically once a customer is due.
-        </p>
       </div>
       <div className="border-t border-border pt-4">
         <Label htmlFor="staleLeadDays">Nudge staff after (days of no activity on a lead)</Label>
@@ -80,12 +62,8 @@ export function SettingsForm({
           defaultValue={invoiceReminderDays}
           className="w-28"
         />
-        <label className="mt-2 flex items-center gap-2 text-sm">
-          <input type="checkbox" name="invoiceReminderWhatsapp" defaultChecked={invoiceReminderWhatsapp} className="size-4 accent-accent" />
-          Also WhatsApp the customer a payment reminder with the invoice link
-        </label>
         <p className="mt-1 text-xs text-faint">
-          You get an in-app notification for each overdue invoice; customer reminders repeat at most once per this interval.
+          You get an in-app notification for each overdue invoice, repeated weekly until it&apos;s paid.
         </p>
       </div>
 
