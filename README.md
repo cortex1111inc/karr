@@ -38,7 +38,7 @@ CRM, lead management, retention and billing for car rental and service businesse
 
 ## Auth & onboarding
 
-- **Signup** (`/signup`) → Supabase `signUp` with the business and owner name in user metadata. If Supabase returns a session (email confirmation off), the workspace is created right away; otherwise the confirmation link goes through `/auth/callback` to `/onboarding`, which creates it (prefilled). `lib/workspace.ts#createWorkspace` is idempotent per login.
+- **Signup** (`/signup`) creates the login already confirmed (service-role `admin.createUser`, no email sent), signs the user in, creates the workspace and opens the dashboard. The address is not verified at signup — password reset (an emailed link) still proves ownership. If workspace creation ever fails, `/onboarding` finishes it from the same details.
 - **Every emailed link** (confirmation, recovery, invite) lands on `/auth/callback`, which supports both `?code=` and `?token_hash=&type=` styles and only redirects to same-site paths (`lib/redirects.ts#safeNextPath` — also used by login).
 - **Password reset**: `/forgot-password` → email → `/reset-password`. **Staff invites** land on `/reset-password?welcome=1` to set a password. **Removing a teammate** deletes their login too.
 - `/app/settings/account`: change name/password, sign out of every device.

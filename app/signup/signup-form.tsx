@@ -11,19 +11,6 @@ const initialState: SignupState = { error: null };
 export function SignupForm() {
   const [state, formAction, pending] = useActionState(signUp, initialState);
 
-  if (state.checkEmail) {
-    return (
-      <div className="flex flex-col gap-2 text-center">
-        <h2 className="font-display text-base font-bold">Check your email</h2>
-        <p className="text-sm text-muted">
-          We sent a confirmation link to <span className="font-medium text-foreground">{state.checkEmail}</span>. Open it
-          on this device to finish setting up your workspace.
-        </p>
-        <p className="mt-2 text-xs text-faint">Didn&apos;t get it? Check spam, or wait a minute and sign up again.</p>
-      </div>
-    );
-  }
-
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div>

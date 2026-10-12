@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getSiteUrl } from "@/lib/site";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createWorkspace } from "@/lib/workspace";
 import { clientKey, consumeRateLimit } from "@/lib/rate-limit";
 
@@ -14,7 +14,7 @@ const signupSchema = z.object({
   password: z.string().min(8, "Use at least 8 characters for your password").max(72),
 });
 
-export type SignupState = { error: string | null; checkEmail?: string };
+export type SignupState = { error: string | null };
 
 export async function signUp(_prev: SignupState, formData: FormData): Promise<SignupState> {
   if (!(await consumeRateLimit(await clientKey("signup"), 5, 3600))) {
@@ -32,31 +32,33 @@ export async function signUp(_prev: SignupState, formData: FormData): Promise<Si
   }
   const { fullName, businessName, email, password } = parsed.data;
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
+  // Create the login already confirmed (no email is sent), then sign in at
+  // once so the new owner lands in their workspace. Trade-off: the address
+  // isn't verified at signup; password reset still proves ownership later.
+  const admin = createAdminClient();
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
     password,
-    options: {
-      // Confirmation link → callback → /onboarding, which creates the
-      // workspace from the metadata below (prefilled, one click).
-      emailRedirectTo: `${getSiteUrl()}/auth/callback?next=${encodeURIComponent("/onboarding")}`,
-      data: { full_name: fullName, business_name: businessName },
-    },
+    email_confirm: true,
+    user_metadata: { full_name: fullName, business_name: businessName },
   });
 
-  if (error) return { error: error.message };
-
-  // Supabase hides whether an email is registered: for an existing account
-  // it returns a user with no identities instead of an error.
-  if (data.user && data.user.identities?.length === 0) {
-    return { error: "An account with this email already exists. Sign in instead." };
+  if (createError || !created.user) {
+    if (createError && /already|registered|exists/i.test(createError.message)) {
+      return { error: "An account with this email already exists. Sign in instead." };
+    }
+    return { error: "We couldn't create your account. Please try again." };
   }
 
-  // Email confirmation turned off in Supabase → we already have a session.
-  if (data.session && data.user) {
-    await createWorkspace({ userId: data.user.id, email, fullName, businessName });
-    redirect("/app/dashboard");
+  const supabase = await createClient();
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  if (signInError) {
+    // Account exists but the session didn't start; signing in manually works.
+    redirect("/login");
   }
 
-  return { error: null, checkEmail: email };
+  // If this fails the user is signed in without a workspace, and /onboarding
+  // (reached via requireUser) finishes the job with the same details.
+  await createWorkspace({ userId: created.user.id, email, fullName, businessName });
+  redirect("/app/dashboard");
 }
